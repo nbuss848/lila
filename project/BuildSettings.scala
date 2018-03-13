@@ -1,27 +1,35 @@
+import com.typesafe.sbt.SbtScalariform.autoImport.scalariformPreferences
 import play.sbt.Play.autoImport._
 import sbt._, Keys._
+import scalariform.formatter.preferences._
 
 object BuildSettings {
 
   import Dependencies._
 
-  val globalScalaVersion = "2.11.11"
+  val globalScalaVersion = "2.11.12"
 
   def buildSettings = Defaults.coreDefaultSettings ++ Seq(
     organization := "org.lichess",
     scalaVersion := globalScalaVersion,
     resolvers ++= Dependencies.Resolvers.commons,
-    scalacOptions := compilerOptions,
+    scalacOptions ++= compilerOptions,
+    javacOptions += "-Xlint:unchecked",
     incOptions := incOptions.value.withNameHashing(true),
     updateOptions := updateOptions.value.withCachedResolution(true),
     sources in doc in Compile := List(),
     // disable publishing the main API jar
     publishArtifact in (Compile, packageDoc) := false,
     // disable publishing the main sources jar
-    publishArtifact in (Compile, packageSrc) := false
+    publishArtifact in (Compile, packageSrc) := false,
+    scalariformPreferences := scalariformPrefs(scalariformPreferences.value)
   )
 
-  def defaultDeps = Seq(scalaz, chess, scalalib, jodaTime, ws, java8compat, specs2)
+  def scalariformPrefs(prefs: IFormattingPreferences) = prefs
+    .setPreference(DanglingCloseParenthesis, Force)
+    .setPreference(DoubleIndentConstructorArguments, true)
+
+  def defaultDeps = Seq(scalaz, chess, scalalib, jodaTime, ws, java8compat, specs2, specs2Scalaz)
 
   def compile(deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided(deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
@@ -34,7 +42,7 @@ object BuildSettings {
       .dependsOn(deps: _*)
       .settings(
         version := "2.0",
-        libraryDependencies := defaultDeps,
+        libraryDependencies ++= defaultDeps,
         buildSettings,
         srcMain
       )
@@ -46,6 +54,7 @@ object BuildSettings {
     // "-Ywarn-unused-import",
     // "-Ywarn-unused",
     // "-Xlint:missing-interpolator",
+    // "-Ywarn-unused-import",
     "-Ybackend:GenBCode", "-Ydelambdafy:method", "-target:jvm-1.8"
   )
 

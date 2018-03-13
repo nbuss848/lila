@@ -23,13 +23,13 @@ final class SlackApi(
     def apply(event: ChargeEvent): Funit =
       if (event.amount < 5000) addToBuffer(event)
       else displayMessage {
-        s"${link(event)} donated ${amount(event.amount)}. Monthly progress: ${event.percent}%"
+        s"${link(event.username)} donated ${amount(event.amount)}. Monthly progress: ${event.percent}%"
       }
 
     private def addToBuffer(event: ChargeEvent): Funit = {
       buffer = buffer :+ event
-      (buffer.head.date isBefore DateTime.now.minusHours(4)) ?? {
-        val patrons = buffer map (_.username) mkString ", "
+      (buffer.head.date isBefore DateTime.now.minusHours(6)) ?? {
+        val patrons = buffer map (_.username) map link mkString ", "
         val amountSum = buffer.map(_.amount).sum
         displayMessage {
           s"$patrons donated ${amount(amountSum)}. Monthly progress: ${buffer.last.percent}%"
@@ -42,13 +42,13 @@ final class SlackApi(
     private def displayMessage(text: String) = client(SlackMessage(
       username = "Patron",
       icon = "four_leaf_clover",
-      text = text,
+      text = linkifyUsers(text),
       channel = "general"
     ))
 
-    private def link(event: ChargeEvent) =
-      if (event.username == "Anonymous") "Anonymous"
-      else s"lichess.org/@/${event.username}"
+    private def link(username: String) =
+      if (username == "Anonymous") "Anonymous"
+      else s"@$username"
 
     private def amount(cents: Int) = s"$$${BigDecimal(cents, 2)}"
   }
@@ -59,6 +59,34 @@ final class SlackApi(
     case Info(msg) => publishInfo(msg)
     case Victory(msg) => publishVictory(msg)
   }
+
+  def commlog(mod: User, user: User, reportBy: Option[User.ID]): Funit = client(SlackMessage(
+    username = mod.username,
+    icon = "eye",
+    text = {
+      val finalS = if (user.username endsWith "s") "" else "s"
+      s"checked out _*${userLink(user.username)}*_'$finalS communications "
+    } + reportBy.filter(mod.id !=).fold("spontaneously") { by =>
+      s"while investigating a report created by ${userLink(by)}"
+    },
+    channel = "commlog"
+  ))
+
+  def chatPanicLink = "<https://lichess.org/mod/chat-panic|Chat Panic>"
+
+  def chatPanic(mod: User, v: Boolean): Funit = client(SlackMessage(
+    username = mod.username,
+    icon = if (v) "anger" else "information_source",
+    text = s"${if (v) "Enabled" else "Disabled"} $chatPanicLink",
+    channel = "tavern"
+  ))
+
+  def garbageCollector(message: String): Funit = client(SlackMessage(
+    username = "lichess",
+    icon = "put_litter_in_its_place",
+    text = linkifyUsers(message),
+    channel = "tavern"
+  ))
 
   def publishError(msg: String): Funit = client(SlackMessage(
     username = "lichess error",
@@ -100,9 +128,10 @@ final class SlackApi(
   private def userLink(name: String) = s"<https://lichess.org/@/$name?mod|$name>"
   private def userNotesLink(name: String) = s"<https://lichess.org/@/$name?notes|notes>"
 
-  private val userRegex = """(^|\s)@(\w[-_\w]+)\b""".r.pattern
+  val userRegex = lila.common.String.atUsernameRegex.pattern
+
   private def linkifyUsers(msg: String) =
-    userRegex matcher msg replaceAll "$1<https://lichess.org/@/$2?mod|@$2>"
+    userRegex matcher msg replaceAll "<https://lichess.org/@/$1?mod|@$1>"
 
   def userMod(user: User, mod: User): Funit = client(SlackMessage(
     username = mod.username,

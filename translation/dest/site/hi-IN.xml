@@ -56,6 +56,8 @@
   <string name="showThreat">खतरे को दिखाएं</string>
   <string name="inLocalBrowser">स्थानीय ब्राउज़र में</string>
   <string name="toggleLocalEvaluation">स्थानीय मूल्यांकन को टॉगल करें</string>
+  <string name="makeMainLine">मुख्य लाइन बनाओ</string>
+  <string name="deleteFromHere">यहां से हटाएं</string>
   <string name="move">चाल</string>
   <string name="variantLoss">भिन् न हानि</string>
   <string name="variantWin">भिन् न जीत</string>
@@ -102,8 +104,11 @@
   <string name="memory">मेमोरी</string>
   <string name="infiniteAnalysis">अनंत विश्लेषण</string>
   <string name="removesTheDepthLimit">गहराई सीमा को निकालता है, और आपके कंप्यूटर को गर्म रखता है</string>
+  <string name="blunder">बड़ी भूल</string>
   <string name="blunders">गंभीर गल्तियां</string>
+  <string name="mistake">गलती</string>
   <string name="mistakes">गलतियाँ</string>
+  <string name="inaccuracy">गलती</string>
   <string name="inaccuracies">त्रुटियाँ</string>
   <string name="moveTimes">चाल समय</string>
   <string name="flipBoard">बोर्ड पलटें</string>
@@ -162,7 +167,6 @@
   <string name="changePassword">पासवर्ड बदलो</string>
   <string name="changeEmail">अपना इ-मेल बदलो</string>
   <string name="email">इ-मेल</string>
-  <string name="emailIsOptional">ई-मेल वैकल्पिक है। अगर आप अपना पासवर्ड भूल जाते हैं, तो लीचेस आपके ई-मेल द्वारा आपको नया पासवर्ड बनाने की अनुमति देगा।</string>
   <string name="passwordReset">पासवर्ड बदलें</string>
   <string name="forgotPassword">क्या आप अपना पासवर्ड भूल गए हैं?</string>
   <string name="rank">श्रेणी (रैंक)</string>
@@ -191,6 +195,7 @@
   <string name="accept">स्वीकार करें</string>
   <string name="decline">अस्वीकार करें</string>
   <string name="playingRightNow">अभी खेला जा रहा</string>
+  <string name="eventInProgress">अभी खेला जा रहा</string>
   <string name="finished">समाप्त</string>
   <string name="abortGame">खेल रद्द करें</string>
   <string name="gameAborted">खेल रद्द किया गया</string>
@@ -199,6 +204,8 @@
   <string name="mode">प्रणाली</string>
   <string name="casual">मूल्यांकन के बिना</string>
   <string name="rated">मूल्यांकित</string>
+  <string name="casualTournament">आकस्मिक</string>
+  <string name="ratedTournament">रेटेड</string>
   <string name="thisGameIsRated">यह खेल मूल्यांकित है</string>
   <string name="rematch">फिर से खेलें</string>
   <string name="rematchOfferSent">फिर से खेलने का प्रस्ताव भेजा गया है</string>
@@ -265,6 +272,7 @@
   <string name="yourPerfRatingIsProvisional">आपके %s रेटिंग अनंतिम है</string>
   <string name="yourPerfRatingIsTooHigh">आपके %1$s रेटिंग (%2$s) बहुत अधिक है</string>
   <string name="yourTopWeeklyPerfRatingIsTooHigh">अपने शीर्ष साप्ताहिक %1$s रेटिंग (%2$s) बहुत अधिक है</string>
+  <string name="yourPerfRatingIsTooLow">आपका %1$s रेटिंग (%2$s) बहुत कम है</string>
   <string name="ratedMoreThanInPerf">≥ %1$s में %2$s रेट</string>
   <string name="ratedLessThanInPerf">≤ %1$s में %2$s रेट</string>
   <string name="backToGame">खेल पर लौटें।</string>
@@ -425,10 +433,6 @@
   <string name="retryThisPuzzle">यह पहेली पुनः खेलें</string>
   <string name="thisPuzzleIsCorrect">यह पहेली सही एवं दिलचस्प थी</string>
   <string name="thisPuzzleIsWrong">यह पहेली गलत एवं बेकार थी</string>
-  <plurals name="youHaveNbSecondsToMakeYourFirstMove">
-    <item quantity="one">आपके पास अपनी पहली चाल चलने के लिए %s सेकंड हैं!</item>
-    <item quantity="other">आपके पास अपनी पहली चाल चलने के लिए %s सेकंड हैं!</item>
-  </plurals>
   <plurals name="nbGamesInPlay">
     <item quantity="one">%s खेल खेले जा रहे है</item>
     <item quantity="other">%s खेल खेले जा रहे है</item>
@@ -645,8 +649,6 @@
   <string name="checkYourEmail">अपना ई-मेल  देखें</string>
   <string name="weHaveSentYouAnEmailClickTheLink">हम आपको एक ईमेल भेज दिया है। अपने खाते को सक्रिय करने के लिए ईमेल में लिंक पर क्लिक करें।</string>
   <string name="ifYouDoNotSeeTheEmailCheckOtherPlaces">आप ईमेल नहीं देखते हैं, तो अन्य स्थानों पर यह हो सकता है, आपकी कबाड़, स्पैम, सामाजिक, या अन्य फ़ोल्डर की तरह की जाँच करें।</string>
-  <string name="areYouSureYouEvenRegisteredYourEmailOnLichess">क्या आप वाकई भी lichess पर अपने ईमेल पंजीकृत हैं?</string>
-  <string name="itWasNotRequiredForYourRegistration">यह अपने पंजीकरण के लिए आवश्यक नहीं था।</string>
   <string name="weHaveSentYouAnEmailTo">हम%s के लिए एक ईमेल भेज दिया है। अपना पासवर्ड रीसेट करने के लिए ईमेल में लिंक पर क्लिक करें।</string>
   <string name="byRegisteringYouAgreeToBeBoundByOur">दर्ज करके, आप हमारे %s द्वारा बाध्य होने के लिए सहमत हैं।</string>
   <string name="networkLagBetweenYouAndLichess">आप और lichess के बीच नेटवर्क के अंतराल</string>
@@ -713,8 +715,6 @@
   <string name="pieceSet">मोहरे</string>
   <string name="embedInYourWebsite">अपनी वेबसाइट में एम्बेड करें</string>
   <string name="usernameAlreadyUsed">यह उपयोगकर्ता नाम पहले से उपयोग में है, कृपया एक दूसरे का प्रयास करें।</string>
-  <string name="usernameInvalid">अमान्य उपयोगकर्ता नाम। कृपया केवल अक्षर, संख्याएँ, अंडरस्कोर और डैश का उपयोग करें।</string>
-  <string name="usernameStartNoNumber">उपयोगकर्ता नाम किसी संख्या से प्रारंभ नहीं होना चाहिए।</string>
   <string name="usernameUnacceptable">यह उपयोगकर्ता नाम स्वीकार्य नहीं है।</string>
   <string name="directlySupportLichess">Lichess का समर्थन करें</string>
   <string name="playChessInStyle">शैली में शतरंज खेलें</string>
@@ -731,4 +731,26 @@
   <string name="notifications">सूचनाएँ</string>
   <string name="challenges">चुनौतियाँ</string>
   <string name="perfRatingX">रेटिंग: %s</string>
+  <string name="practiceWithComputer">कंप्यूटर के साथ अभ्यास</string>
+  <string name="theGameIsADraw">खेल ड्रॉ है ।</string>
+  <string name="computerThinking">कंप्यूटर सोच...</string>
+  <string name="seeBestMove">सबसे अच्छा कदम देखें</string>
+  <string name="hideBestMove">सबसे अच्छा कदम छिपाएं</string>
+  <string name="getAHint">एक संकेत प्राप्त करें</string>
+  <string name="whiteWinsGame">सफेद जीत</string>
+  <string name="blackWinsGame">काला विजयी</string>
+  <string name="learnFromYourMistakes">अपनी गलतियों से सीखें</string>
+  <string name="skipThisMove">इस चाल को छोड़ें</string>
+  <string name="next">अगला</string>
+  <string name="xWasPlayed">%s खेला गया</string>
+  <string name="findBetterMoveForWhite">सफेद के लिए एक बेहतर कदम का पता लगाएं</string>
+  <string name="findBetterMoveForBlack">काले के लिए एक बेहतर कदम खोजें</string>
+  <string name="youCanDoBetter">आप बेहतर कर सकते हैं</string>
+  <string name="tryAnotherMoveForWhite">सफ़ेद के लिए एक और चाल आज़माएं</string>
+  <string name="tryAnotherMoveForBlack">काले के लिए एक और कदम की कोशिश</string>
+  <string name="solution">समाधान</string>
+  <string name="waitingForAnalysis">विश्लेषण के लिए प्रतीक्षा</string>
+  <string name="noMistakesFoundForWhite">श्वेता के लिए नहीं मिली कोई गलतियां</string>
+  <string name="doItAgain">इसे फिर से करो</string>
+  <string name="advantage">लाभ</string>
 </resources>

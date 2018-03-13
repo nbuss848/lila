@@ -1,7 +1,7 @@
 import { h } from 'snabbdom'
 import { VNode } from 'snabbdom/vnode'
 import * as util from '../util';
-import { game, status, router } from 'game';
+import { PlayerUser, game, status, router } from 'game';
 import { RoundData, MaybeVNodes } from '../interfaces';
 import { ClockData } from '../clock/clockCtrl';
 import RoundController from '../ctrl';
@@ -10,8 +10,8 @@ function analysisBoardOrientation(data: RoundData) {
   return data.game.variant.key === 'racingKings' ? 'white' : data.player.color;
 }
 
-function poolUrl(clock: ClockData) {
-  return '/#pool/' + (clock.initial / 60) + '+' + clock.increment;
+function poolUrl(clock: ClockData, blocking?: PlayerUser) {
+  return '/#pool/' + (clock.initial / 60) + '+' + clock.increment + (blocking ? '/' + blocking.id : '');
 }
 
 function analysisButton(ctrl: RoundController): VNode | null {
@@ -192,7 +192,7 @@ export function submitMove(ctrl: RoundController): VNode | undefined {
     h('a.accept', {
       attrs: {
         'data-icon': 'E',
-        title: 'Submit move'
+        title: ctrl.trans.noarg('accept')
       },
       hook: util.bind('click', () => ctrl.submitMove(true))
     }),
@@ -248,14 +248,19 @@ export function followUp(ctrl: RoundController): VNode {
       d.game.source === 'pool'),
   rematchZone = ctrl.challengeRematched ? [
     h('div.suggestion.text', util.justIcon('j'), ctrl.trans.noarg('rematchOfferSent')
-  )] : (rematchable || d.game.rematch ? rematchButtons(ctrl) : []);
+  )] : (rematchable || d.game.rematch ? rematchButtons(ctrl) : [
+    h('a.button.rematch.white',
+      { class: { disabled: true } },
+      [h('span', ctrl.trans.noarg('rematch'))]
+    )
+  ]);
   return h('div.follow_up', [
     ...rematchZone,
     d.tournament ? h('a.button', {
       attrs: {href: '/tournament/' + d.tournament.id}
     }, ctrl.trans.noarg('viewTournament')) : null,
     newable ? h('a.button', {
-      attrs: {href: d.game.source === 'pool' ? poolUrl(d.clock!) : '/?hook_like=' + d.game.id },
+      attrs: {href: d.game.source === 'pool' ? poolUrl(d.clock!, d.opponent.user) : '/?hook_like=' + d.game.id },
     }, ctrl.trans.noarg('newOpponent')) : null,
     analysisButton(ctrl)
   ]);

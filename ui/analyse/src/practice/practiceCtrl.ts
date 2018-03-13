@@ -9,11 +9,16 @@ export interface Comment {
   prev: Tree.Node;
   node: Tree.Node;
   path: Tree.Path;
-  verdict: 'good' | 'inaccuracy' | 'mistake' | 'blunder';
+  verdict: 'goodMove' | 'inaccuracy' | 'mistake' | 'blunder';
   best?: {
     uci: Uci;
     san: San;
   }
+}
+
+interface Hinting {
+  mode: 'move' | 'piece';
+  uci: Uci;
 }
 
 export interface PracticeCtrl {
@@ -25,7 +30,7 @@ export function make(root: AnalyseCtrl, playableDepth: () => number): PracticeCt
   const running = prop(true),
   comment = prop<Comment | null>(null),
   hovering = prop<any>(null),
-  hinting = prop<any>(null),
+  hinting = prop<Hinting | null>(null),
   played = prop(false);
 
   function ensureCevalRunning() {
@@ -44,7 +49,7 @@ export function make(root: AnalyseCtrl, playableDepth: () => number): PracticeCt
     const ceval = node.ceval;
     return ceval ? (
       ceval.depth >= Math.min(ceval.maxDepth || 99, playableDepth()) ||
-      (ceval.depth >= 15 && ceval.millis > 5000)
+      (ceval.depth >= 15 && (ceval.cloud || ceval.millis > 5000))
     ) : false;
   };
 
@@ -59,7 +64,7 @@ export function make(root: AnalyseCtrl, playableDepth: () => number): PracticeCt
     let verdict, best;
     const over = root.gameOver(node);
 
-    if (over === 'checkmate') verdict = 'good';
+    if (over === 'checkmate') verdict = 'goodMove';
     else {
       const nodeEval: Eval = (node.threefold || over === 'draw') ? {
         cp: 0
@@ -67,10 +72,10 @@ export function make(root: AnalyseCtrl, playableDepth: () => number): PracticeCt
       const shift = -winningChances.povDiff(root.bottomColor(), nodeEval, prev.ceval);
 
       best = prev.ceval.pvs[0].moves[0];
-      if (best === node.uci || best === altCastles[node.uci]) best = null;
+      if (best === node.uci || best === altCastles[node.uci!]) best = null;
 
-      if (!best) verdict = 'good';
-      else if (shift < 0.025) verdict = 'good';
+      if (!best) verdict = 'goodMove';
+      else if (shift < 0.025) verdict = 'goodMove';
       else if (shift < 0.06) verdict = 'inaccuracy';
       else if (shift < 0.14) verdict = 'mistake';
       else verdict = 'blunder';
@@ -109,8 +114,18 @@ export function make(root: AnalyseCtrl, playableDepth: () => number): PracticeCt
       comment(null);
       if (node.san && commentable(node)) {
         const parentNode = root.tree.parentNode(root.path);
-        if (commentable(parentNode, +1))
-        comment(makeComment(parentNode, node, root.path));
+        if (commentable(parentNode, +1)) comment(makeComment(parentNode, node, root.path));
+        else {
+          /*
+           * Looks like the parent node didn't get enough analysis time
+           * to be commentable :-/ it can happen if the player premoves
+           * or just makes a move before the position is sufficiently analysed.
+           * In this case, fall back to comparing to the position before,
+           * Since computer moves are supposed to preserve eval anyway.
+           */
+          const olderNode = root.tree.parentNode(treePath.init(root.path));
+          if (commentable(olderNode, +1)) comment(makeComment(olderNode, node, root.path));
+        }
       }
       if (!played() && playable(node)) {
         root.playUci(node.ceval!.pvs[0].moves[0]);

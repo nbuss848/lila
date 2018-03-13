@@ -3,7 +3,7 @@ package lila.blog
 import io.prismic.Document
 
 import lila.hub.actorApi.timeline.BlogPost
-import lila.timeline.{ Entry, EntryApi }
+import lila.timeline.EntryApi
 
 private[blog] final class Notifier(
     blogApi: BlogApi,
@@ -17,7 +17,6 @@ private[blog] final class Notifier(
     }
 
   private def doSend(post: Document): Funit = post.getText("blog.title") ?? { title =>
-
     timelineApi.broadcast.insert {
       BlogPost(id = post.id, slug = post.slug, title = title)
     }

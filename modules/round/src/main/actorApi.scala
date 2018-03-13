@@ -1,7 +1,6 @@
 package lila.round
 package actorApi
 
-import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.Promise
 
 import chess.{ MoveMetrics, Color }
@@ -118,12 +117,10 @@ package round {
   case class Resign(playerId: String)
   case object ResignAi
   case class ResignForce(playerId: String)
-  case class NoStartColor(color: Color)
   case class DrawForce(playerId: String)
   case class DrawClaim(playerId: String)
   case class DrawYes(playerId: String)
   case class DrawNo(playerId: String)
-  case object DrawForce
   case class RematchYes(playerId: String)
   case class RematchNo(playerId: String)
   case class TakebackYes(playerId: String)
@@ -136,6 +133,8 @@ package round {
   case class Cheat(color: Color)
   case class HoldAlert(playerId: String, mean: Int, sd: Int, ip: IpAddress)
   case class GoBerserk(color: Color)
+  case object NoStart
+  case object TooManyPlies
 }
 
 private[round] case object GetNbRounds

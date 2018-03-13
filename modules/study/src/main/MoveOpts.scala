@@ -2,19 +2,18 @@ package lila.study
 
 import chess.Centis
 
-private case class MoveOpts(
+case class MoveOpts(
     write: Boolean,
     sticky: Boolean,
     promoteToMainline: Boolean,
     clock: Option[Centis]
 )
 
-private object MoveOpts {
+object MoveOpts {
 
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
   import play.api.data.validation.{ ValidationError => Err }
-  import lila.common.PimpedJson._
 
   private val default = MoveOpts(
     write = true,

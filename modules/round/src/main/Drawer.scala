@@ -8,7 +8,8 @@ import chess.Centis
 private[round] final class Drawer(
     messenger: Messenger,
     finisher: Finisher,
-    prefApi: PrefApi
+    prefApi: PrefApi,
+    bus: lila.common.Bus
 ) {
 
   def autoThreefold(game: Game)(implicit proxy: GameProxy): Fu[Option[Pov]] = Pov(game).map { pov =>
@@ -23,14 +24,14 @@ private[round] final class Drawer(
   }.sequenceFu map (_.flatten.headOption)
 
   def yes(pov: Pov)(implicit proxy: GameProxy): Fu[Events] = pov match {
-    case pov if pov.game.toChessHistory.threefoldRepetition =>
-      finisher.other(pov.game, _.Draw)
+    case pov if pov.game.history.threefoldRepetition =>
+      finisher.other(pov.game, _.Draw, None)
     case pov if pov.opponent.isOfferingDraw =>
       finisher.other(pov.game, _.Draw, None, Some(_.drawOfferAccepted))
     case Pov(g, color) if g playerCanOfferDraw color => proxy.save {
       messenger.system(g, color.fold(_.whiteOffersDraw, _.blackOffersDraw))
       Progress(g) map { g => g.updatePlayer(color, _ offerDraw g.turns) }
-    } inject List(Event.DrawOffer(by = color.some))
+    } >>- publishDrawOffer(pov) inject List(Event.DrawOffer(by = color.some))
     case _ => fuccess(List(Event.ReloadOwner))
   }
 
@@ -47,7 +48,13 @@ private[round] final class Drawer(
   }
 
   def claim(pov: Pov)(implicit proxy: GameProxy): Fu[Events] =
-    (pov.game.playable && pov.game.toChessHistory.threefoldRepetition) ?? finisher.other(pov.game, _.Draw)
+    (pov.game.playable && pov.game.history.threefoldRepetition) ?? finisher.other(pov.game, _.Draw, None)
 
   def force(game: Game)(implicit proxy: GameProxy): Fu[Events] = finisher.other(game, _.Draw, None, None)
+
+  private def publishDrawOffer(pov: Pov): Unit =
+    if (pov.game.isCorrespondence && pov.game.nonAi) bus.publish(
+      lila.hub.actorApi.round.CorresDrawOfferEvent(pov.gameId),
+      'offerEventCorres
+    )
 }

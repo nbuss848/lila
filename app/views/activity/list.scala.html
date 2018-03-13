@@ -60,7 +60,7 @@ case (pt, score) => {
   <div>
     @posts.map {
     case (topic, posts) => {
-    @trans.activity.postedNbMessages.plural(posts.size, posts.size, Html(s"""<a href="${routes.ForumTopic.show(topic.categId, topic.slug)}">${shorten(topic.name, 70)}</a>"""))
+    @trans.activity.postedNbMessages.plural(posts.size, posts.size, Html(s"""<a href="${routes.ForumTopic.show(topic.categId, topic.slug)}">${escapeHtml(shorten(topic.name, 70))}</a>"""))
     <div class="sub">
       @posts.map { post =>
       <div class="line">
@@ -168,7 +168,7 @@ case (pt, score) => {
 
 @renderStudies(studies: List[lila.study.Study.IdName]) = {
 <div class="entry">
-  <i data-icon=""></i>
+  <i data-icon="4"></i>
   <div>
     @trans.activity.createdNbStudies.pluralSame(studies.size)
     <div class="sub">
@@ -212,6 +212,13 @@ case (pt, score) => {
 </div>
 }
 
+@renderStream() = {
+<div class="entry">
+  <i data-icon=""></i>
+  Hosted a <a href="@routes.Streamer.show(u.username)">live stream</a>
+</div>
+}
+
 @renderSignup() = {
 <div class="entry">
   <i data-icon="s"></i>
@@ -242,6 +249,7 @@ case (pt, score) => {
       @a.studies.map(renderStudies)
       @a.tours.map(renderTours)
       @a.teams.map(renderTeams)
+      @if(a.stream) { @renderStream() }
       @if(a.signup) { @renderSignup() }
     </div>
   </section>

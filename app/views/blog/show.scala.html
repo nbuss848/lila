@@ -30,17 +30,13 @@ description = ~doc.getText("blog.shortlede")).some) {
     @doc.getHtml("blog.body", prismic.linkResolver).map(lila.blog.Youtube.fixStartTimes).map(lila.blog.ProtocolFix.remove).map(Html.apply)
   </div>
   @NotForKids {
-  <div id="disqus_thread"></div>
-  <script type="text/javascript">
-    var disqus_shortname = 'lichessorg';
-    var disqus_identifier = '@doc.id';
-    var disqus_title = '@doc.getText("blog.title")';
-    (function() {
-      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-    })();
-  </script>
+  <div class="footer">
+    @if(prismic.maybeRef.isEmpty) {
+    <a href="@routes.Blog.discuss(doc.id)" class="button text discuss" data-icon="d">Discuss this blog post in the forum</a>
+    } else {
+    <p>This is a preview.</p>
+    }
+  </div>
   }
 </div>
 }

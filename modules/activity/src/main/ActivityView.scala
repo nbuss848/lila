@@ -1,6 +1,6 @@
 package lila.activity
 
-import org.joda.time.{ DateTime, Interval }
+import org.joda.time.Interval
 
 import lila.game.Pov
 import lila.practice.PracticeStudy
@@ -25,9 +25,9 @@ case class ActivityView(
     studies: Option[List[Study.IdName]] = None,
     teams: Option[Teams] = None,
     tours: Option[ActivityView.Tours] = None,
+    stream: Boolean = false,
     signup: Boolean = false
-) {
-}
+)
 
 object ActivityView {
 

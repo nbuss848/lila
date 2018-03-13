@@ -74,6 +74,8 @@ case class Study(
 
 object Study {
 
+  val maxChapters = 64
+
   case class Id(value: String) extends AnyVal with StringValue
   implicit val idIso = lila.common.Iso.string[Id](Id.apply, _.value)
 
@@ -116,6 +118,7 @@ object Study {
     case object Scratch extends From
     case class Game(id: String) extends From
     case class Study(id: Id) extends From
+    case class Relay(clonedFrom: Option[Id]) extends From
   }
 
   case class Data(
@@ -146,26 +149,28 @@ object Study {
 
   case class WithChaptersAndLiked(study: Study, chapters: Seq[Chapter.Name], liked: Boolean)
 
+  case class WithLiked(study: Study, liked: Boolean)
+
   case class LightStudy(isPublic: Boolean, contributors: Set[User.ID])
 
   val idSize = 8
 
   def makeId = Id(scala.util.Random.alphanumeric take idSize mkString)
 
-  def make(user: User, from: From) = {
+  def make(user: User, from: From, id: Option[Study.Id] = None, name: Option[Name] = None, settings: Option[Settings] = None) = {
     val owner = StudyMember(
       id = user.id,
       role = StudyMember.Role.Write,
       addedAt = DateTime.now
     )
     Study(
-      _id = makeId,
-      name = Name(s"${user.username}'s Study"),
+      _id = id | makeId,
+      name = name | Name(s"${user.username}'s Study"),
       members = StudyMembers(Map(user.id -> owner)),
       position = Position.Ref(Chapter.Id(""), Path.root),
       ownerId = user.id,
       visibility = Visibility.Public,
-      settings = Settings.init,
+      settings = settings | Settings.init,
       from = from,
       likes = Likes(1),
       createdAt = DateTime.now,

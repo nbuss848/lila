@@ -2,7 +2,6 @@ package lila.analyse
 
 import play.api.libs.json._
 
-import lila.common.PimpedJson._
 import lila.game.Game
 import lila.tree.Eval.JsonHandlers._
 
@@ -26,7 +25,9 @@ object JsonView {
       })
   })
 
-  def player(pov: lila.game.Pov)(analysis: Analysis) =
+  import Accuracy.povToPovLike
+
+  def player(pov: Accuracy.PovLike)(analysis: Analysis) =
     analysis.summary.find(_._1 == pov.color).map(_._2).map(s =>
       JsObject(s map {
         case (nag, nb) => nag.toString.toLowerCase -> JsNumber(nb)
@@ -35,6 +36,11 @@ object JsonView {
   def bothPlayers(game: Game, analysis: Analysis) = Json.obj(
     "white" -> player(game.whitePov)(analysis),
     "black" -> player(game.blackPov)(analysis)
+  )
+
+  def bothPlayers(pov: Accuracy.PovLike, analysis: Analysis) = Json.obj(
+    "white" -> player(pov.copy(color = chess.White))(analysis),
+    "black" -> player(pov.copy(color = chess.Black))(analysis)
   )
 
   def mobile(game: Game, analysis: Analysis) = Json.obj(

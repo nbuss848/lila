@@ -3,8 +3,6 @@ package lila.puzzle
 import akka.actor.{ ActorSelection, ActorSystem }
 import com.typesafe.config.Config
 
-import lila.common.PimpedConfig._
-
 final class Env(
     config: Config,
     renderer: ActorSelection,
@@ -53,6 +51,13 @@ final class Env(
   lazy val selector = new Selector(
     puzzleColl = puzzleColl,
     api = api,
+    puzzleIdMin = PuzzleIdMin
+  )
+
+  lazy val batch = new PuzzleBatch(
+    puzzleColl = puzzleColl,
+    api = api,
+    finisher = finisher,
     puzzleIdMin = PuzzleIdMin
   )
 

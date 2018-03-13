@@ -13,8 +13,6 @@ final class Env(
 ) {
 
   private val CollectionDevice = config getString "collection.device"
-  private val GooglePushUrl = config getString "google.url"
-  private val GooglePushKey = config getString "google.key"
   private val OneSignalUrl = config getString "onesignal.url"
   private val OneSignalAppId = config getString "onesignal.app_id"
   private val OneSignalKey = config getString "onesignal.key"
@@ -31,14 +29,7 @@ final class Env(
     key = OneSignalKey
   )
 
-  private lazy val googlePush = new GooglePush(
-    deviceApi.findLastOneByUserId("android") _,
-    url = GooglePushUrl,
-    key = GooglePushKey
-  )
-
   private lazy val pushApi = new PushApi(
-    googlePush,
     oneSignalPush,
     getLightUser,
     roundSocketHub,
@@ -49,12 +40,14 @@ final class Env(
     def receive = {
       case lila.game.actorApi.FinishGame(game, _, _) => pushApi finish game
       case lila.hub.actorApi.round.CorresMoveEvent(move, _, pushable, _, _) if pushable => pushApi move move
+      case lila.hub.actorApi.round.CorresTakebackOfferEvent(gameId) => pushApi takebackOffer gameId
+      case lila.hub.actorApi.round.CorresDrawOfferEvent(gameId) => pushApi drawOffer gameId
       case lila.message.Event.NewMessage(t, p) => pushApi newMessage (t, p)
       case lila.challenge.Event.Create(c) => pushApi challengeCreate c
       case lila.challenge.Event.Accept(c, joinerId) => pushApi.challengeAccept(c, joinerId)
       case lila.game.actorApi.CorresAlarmEvent(pov) => pushApi corresAlarm pov
     }
-  })), 'finishGame, 'moveEventCorres, 'newMessage, 'challenge, 'corresAlarm)
+  })), 'finishGame, 'moveEventCorres, 'newMessage, 'challenge, 'corresAlarm, 'offerEventCorres)
 }
 
 object Env {

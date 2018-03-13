@@ -59,7 +59,7 @@ function threatButton(ctrl: ParentCtrl): VNode | null {
   return h('a.show-threat', {
     class: {
       active: ctrl.threatMode(),
-      hidden: ctrl.getNode().check
+      hidden: !!ctrl.getNode().check
     },
     attrs: {
       'data-icon': '7',
@@ -71,9 +71,12 @@ function threatButton(ctrl: ParentCtrl): VNode | null {
   });
 }
 
-function engineName(ctrl: CevalCtrl) {
+function engineName(ctrl: CevalCtrl): VNode[] {
+  const version = ctrl.engineName();
   return [
-    window.lichess.engineName,
+    h('span', version ? {
+      attrs: { title: version }
+    } : {}, window.lichess.engineName),
     ctrl.pnaclSupported ? h('span.native', 'pnacl') : (ctrl.wasmSupported ? h('span.native', 'wasm') : h('span.asmjs', 'asmjs'))
   ];
 }
@@ -116,11 +119,11 @@ export function renderGauge(ctrl: ParentCtrl): VNode | undefined {
 export function renderCeval(ctrl: ParentCtrl): VNode | undefined {
   const instance = ctrl.getCeval();
   if (!instance.allowed() || !instance.possible || !ctrl.showComputer()) return;
-  const enabled = instance.enabled();
-  const evs = ctrl.currentEvals();
-  const bestEv = getBestEval(evs);
-  const threatMode = ctrl.threatMode();
-  const threat = threatMode && ctrl.getNode().threat;
+  const enabled = instance.enabled(),
+  evs = ctrl.currentEvals(),
+  threatMode = ctrl.threatMode(),
+  threat = threatMode && ctrl.getNode().threat,
+  bestEv = threat || getBestEval(evs);
   let pearl: VNode | string, percent: number;
   if (bestEv && typeof bestEv.cp !== 'undefined') {
     pearl = renderEval(bestEv.cp);
@@ -160,17 +163,20 @@ export function renderCeval(ctrl: ParentCtrl): VNode | undefined {
 
   const body: Array<VNode | null> = enabled ? [
     h('pearl', [pearl]),
-    h('div.engine',
-      (threatMode ? [ctrl.trans.noarg('showThreat')] : engineName(instance)).concat(
-        h('span.info', ctrl.gameOver() ? [ctrl.trans.noarg('gameOver')] : (
-          threatMode ? [threatInfo(ctrl, threat)] : localEvalInfo(ctrl, evs)
-        )))
-    )
+    h('div.engine', [
+      ...(threatMode ? [ctrl.trans.noarg('showThreat')] : engineName(instance)),
+      h('span.info',
+        ctrl.gameOver() ? [ctrl.trans.noarg('gameOver')] :
+        (threatMode ? [threatInfo(ctrl, threat)] : localEvalInfo(ctrl, evs))
+      )
+    ])
   ] : [
     pearl ? h('pearl', [pearl]) : null,
-    h('help',
-      engineName(instance).concat([ h('br'), ctrl.trans.noarg('inLocalBrowser') ])
-    )
+    h('help', [
+      ...engineName(instance),
+      h('br'),
+      ctrl.trans.noarg('inLocalBrowser')
+    ])
   ];
 
   const switchButton: VNode | null = mandatoryCeval ? null : h('div.switch', {

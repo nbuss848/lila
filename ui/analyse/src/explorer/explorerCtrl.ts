@@ -1,10 +1,10 @@
-import { throttle, prop, storedProp } from 'common';
+import { prop, storedProp } from 'common';
 import { controller as configCtrl } from './explorerConfig';
 import xhr = require('./openingXhr');
 import { synthetic } from '../util';
 import { game as gameUtil } from 'game';
 import AnalyseCtrl from '../ctrl';
-import { Hovering, ExplorerCtrl } from './interfaces';
+import { Hovering, ExplorerCtrl, ExplorerData, OpeningData } from './interfaces';
 
 function tablebaseRelevant(variant: string, fen: Fen) {
   const parts = fen.split(/\s/);
@@ -17,13 +17,15 @@ function tablebaseRelevant(variant: string, fen: Fen) {
 }
 
 export default function(root: AnalyseCtrl, opts, allow: boolean): ExplorerCtrl {
-  const allowed = prop(allow);
-  const enabled = root.embed ? prop(false) : storedProp('explorer.enabled', false);
+  const allowed = prop(allow),
+  enabled = root.embed ? prop(false) : storedProp('explorer.enabled', false),
+  loading = prop(true),
+  failing = prop(false),
+  hovering = prop<Hovering | null>(null),
+  movesAway = prop(0),
+  gameMenu = prop<string | null>(null);
+
   if ((location.hash === '#explorer' || location.hash === '#opening') && !root.embed) enabled(true);
-  const loading = prop(true);
-  const failing = prop(false);
-  const hovering = prop<Hovering | null>(null);
-  const movesAway = prop(0);
 
   let cache = {};
   function onConfigClose() {
@@ -31,22 +33,20 @@ export default function(root: AnalyseCtrl, opts, allow: boolean): ExplorerCtrl {
     cache = {};
     setNode();
   }
-  const withGames = synthetic(root.data) || gameUtil.replayable(root.data) || root.data.opponent.ai;
+  const withGames = synthetic(root.data) || gameUtil.replayable(root.data) || !!root.data.opponent.ai;
   const effectiveVariant = root.data.game.variant.key === 'fromPosition' ? 'standard' : root.data.game.variant.key;
 
   const config = configCtrl(root.data.game, onConfigClose, root.trans, root.redraw);
 
-  const fetch = throttle(250, function() {
+  const fetch = window.lichess.fp.debounce(function() {
     const fen = root.node.fen;
-    const request = (withGames && tablebaseRelevant(effectiveVariant, fen)) ?
+    const request: JQueryPromise<ExplorerData> = (withGames && tablebaseRelevant(effectiveVariant, fen)) ?
       xhr.tablebase(opts.tablebaseEndpoint, effectiveVariant, fen) :
       xhr.opening(opts.endpoint, effectiveVariant, fen, config.data, withGames);
 
-    request.then(function(res) {
-      res.nbMoves = res.moves.length;
-      res.fen = fen;
+    request.then((res: ExplorerData) => {
       cache[fen] = res;
-      movesAway(res.nbMoves ? 0 : movesAway() + 1);
+      movesAway(res.moves.length ? 0 : movesAway() + 1);
       loading(false);
       failing(false);
       root.redraw();
@@ -54,8 +54,8 @@ export default function(root: AnalyseCtrl, opts, allow: boolean): ExplorerCtrl {
       loading(false);
       failing(true);
       root.redraw();
-    })
-  }, false);
+    });
+  }, 250, true);
 
   const empty = {
     opening: true,
@@ -64,13 +64,14 @@ export default function(root: AnalyseCtrl, opts, allow: boolean): ExplorerCtrl {
 
   function setNode() {
     if (!enabled()) return;
+    gameMenu(null);
     const node = root.node;
     if (node.ply > 50 && !tablebaseRelevant(effectiveVariant, node.fen)) {
       cache[node.fen] = empty;
     }
     const cached = cache[root.node.fen];
     if (cached) {
-      movesAway(cached.nbMoves ? 0 : movesAway() + 1);
+      movesAway(cached.moves.length ? 0 : movesAway() + 1);
       loading(false);
       failing(false);
     } else {
@@ -89,6 +90,7 @@ export default function(root: AnalyseCtrl, opts, allow: boolean): ExplorerCtrl {
     movesAway,
     config,
     withGames,
+    gameMenu,
     current: () => cache[root.node.fen],
     toggle() {
       movesAway(0);
@@ -99,6 +101,7 @@ export default function(root: AnalyseCtrl, opts, allow: boolean): ExplorerCtrl {
     disable() {
       if (enabled()) {
         enabled(false);
+        gameMenu(null);
         root.autoScroll();
       }
     },
@@ -111,13 +114,13 @@ export default function(root: AnalyseCtrl, opts, allow: boolean): ExplorerCtrl {
     },
     fetchMasterOpening: (function() {
       const masterCache = {};
-      return function(fen) {
-        if (masterCache[fen]) return $.Deferred().resolve(masterCache[fen]);
+      return (fen: Fen): JQueryPromise<OpeningData> => {
+        if (masterCache[fen]) return $.Deferred().resolve(masterCache[fen]).promise() as JQueryPromise<OpeningData>;
         return xhr.opening(opts.endpoint, 'standard', fen, {
           db: {
             selected: prop('masters')
           }
-        }, false).then(function(res) {
+        }, false).then((res: OpeningData) => {
           masterCache[fen] = res;
           return res;
         });

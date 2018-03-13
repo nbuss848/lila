@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 
 import lila.analyse.{ JsonView => analysisJson, AnalysisRepo, Analysis }
 import lila.common.paginator.{ Paginator, PaginatorJson }
-import lila.common.PimpedJson._
+import lila.common.MaxPerPage
 import lila.db.dsl._
 import lila.db.paginator.{ Adapter, CachedAdapter }
 import lila.game.BSONHandlers._
@@ -33,7 +33,7 @@ private[api] final class GameApi(
     playing: Option[Boolean],
     analysed: Option[Boolean],
     withFlags: WithFlags,
-    nb: Int,
+    nb: MaxPerPage,
     page: Int
   ): Fu[JsObject] = Paginator(
     adapter = new CachedAdapter(
@@ -85,7 +85,7 @@ private[api] final class GameApi(
     playing: Option[Boolean],
     analysed: Option[Boolean],
     withFlags: WithFlags,
-    nb: Int,
+    nb: MaxPerPage,
     page: Int
   ): Fu[JsObject] = Paginator(
     adapter = new CachedAdapter(
@@ -123,7 +123,7 @@ private[api] final class GameApi(
     analysed: Option[Boolean],
     withFlags: WithFlags,
     since: DateTime,
-    nb: Int,
+    nb: MaxPerPage,
     page: Int
   ): Fu[JsObject] = Paginator(
     adapter = new Adapter[Game](
@@ -196,10 +196,10 @@ private[api] final class GameApi(
     "players" -> JsObject(g.players map { p =>
       p.color.name -> Json.obj(
         "userId" -> p.userId,
-        "name" -> p.name,
         "rating" -> p.rating,
         "ratingDiff" -> p.ratingDiff
-      ).add("provisional" -> p.provisional)
+      ).add("name", p.name)
+        .add("provisional" -> p.provisional)
         .add("moveCentis" -> withFlags.moveTimes ?? g.moveTimes(p.color).map(_.map(_.centis)))
         .add("blurs" -> withFlags.blurs.option(p.blurs.nb))
         .add("hold" -> p.holdAlert.ifTrue(withFlags.hold).map { h =>

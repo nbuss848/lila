@@ -16,6 +16,8 @@ private object BSONHandlers {
   import activities._
   import model._
 
+  def regexId(userId: User.ID) = $doc("_id" -> $doc("$regex" -> s"^$userId:"))
+
   implicit val activityIdHandler: BSONHandler[BSONString, Id] = new BSONHandler[BSONString, Id] {
     private val sep = ':'
     def read(bs: BSONString) = bs.value split sep match {
@@ -87,8 +89,8 @@ private object BSONHandlers {
 
   private implicit val followsHandler = new lila.db.BSON[Follows] {
     def reads(r: lila.db.BSON.Reader) = Follows(
-      in = r.getO[FollowList]("i"),
-      out = r.getO[FollowList]("o")
+      in = r.getO[FollowList]("i").filterNot(_.isEmpty),
+      out = r.getO[FollowList]("o").filterNot(_.isEmpty)
     )
     def writes(w: lila.db.BSON.Writer, o: Follows) = BSONDocument(
       "i" -> o.in,
@@ -114,6 +116,7 @@ private object BSONHandlers {
     val follows = "f"
     val studies = "t"
     val teams = "e"
+    val stream = "st"
   }
 
   implicit val activityHandler = new lila.db.BSON[Activity] {
@@ -130,9 +133,10 @@ private object BSONHandlers {
       simuls = r.getO[Simuls](simuls),
       corres = r.getO[Corres](corres),
       patron = r.getO[Patron](patron),
-      follows = r.getO[Follows](follows),
+      follows = r.getO[Follows](follows).filterNot(_.isEmpty),
       studies = r.getO[Studies](studies),
-      teams = r.getO[Teams](teams)
+      teams = r.getO[Teams](teams),
+      stream = r.getD[Boolean](stream)
     )
 
     def writes(w: lila.db.BSON.Writer, o: Activity) = BSONDocument(
@@ -147,7 +151,8 @@ private object BSONHandlers {
       patron -> o.patron,
       follows -> o.follows,
       studies -> o.studies,
-      teams -> o.teams
+      teams -> o.teams,
+      stream -> o.stream.option(true)
     )
   }
 }

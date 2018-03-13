@@ -11,6 +11,10 @@ import lila.game.{ Query, Game, GameRepo }
 import lila.hub.actorApi.map.Tell
 import lila.round.actorApi.round.{ QuietFlag, Abandon }
 
+/*
+ * Cleans up unfinished games
+ * and flagged games when no one is around
+ */
 private[round] final class Titivate(
     roundMap: ActorRef,
     bookmark: ActorSelection,
@@ -20,7 +24,7 @@ private[round] final class Titivate(
   object Schedule
   object Run
 
-  override def preStart() {
+  override def preStart(): Unit = {
     scheduleNext
     context setReceiveTimeout 30.seconds
   }

@@ -1,10 +1,8 @@
 package controllers
 
 import play.api.data.Form
-import play.api.i18n.Messages.Implicits._
 import play.api.libs.json.Json
 import play.api.mvc.{ Result, Results }
-import play.api.Play.current
 import scala.concurrent.duration._
 
 import lila.api.{ Context, BodyContext }
@@ -49,7 +47,7 @@ object Setup extends LilaController with TheftPrevention {
         userId ?? UserRepo.named flatMap {
           case None => Ok(html.setup.friend(form, none, none, validFen)).fuccess
           case Some(user) => Env.challenge.granter(ctx.me, user, none) map {
-            case Some(denied) => BadRequest(lila.challenge.ChallengeDenied.inEnglish(denied))
+            case Some(denied) => BadRequest(lila.challenge.ChallengeDenied.translated(denied))
             case None => Ok(html.setup.friend(form, user.some, none, validFen))
           }
         }
@@ -150,15 +148,14 @@ object Setup extends LilaController with TheftPrevention {
   def like(uid: String, gameId: String) = Open { implicit ctx =>
     PostRateLimit(HTTPRequest lastRemoteAddress ctx.req) {
       NoPlaybanOrCurrent {
-        env.forms.hookConfig flatMap { config =>
-          GameRepo game gameId map {
-            _.fold(config)(config.updateFrom)
-          } flatMap { config =>
-            (ctx.userId ?? Env.relation.api.fetchBlocking) flatMap { blocking =>
-              env.processor.hook(config, uid, HTTPRequest sid ctx.req, blocking) map hookResponse
-            }
-          }
-        }
+        for {
+          config <- env.forms.hookConfig
+          game <- GameRepo.game(gameId)
+          blocking <- ctx.userId ?? Env.relation.api.fetchBlocking
+          hookConfig = game.fold(config)(config.updateFrom)
+          sameOpponents = game.??(_.userIds)
+          hookResult <- env.processor.hook(hookConfig, uid, HTTPRequest sid ctx.req, blocking ++ sameOpponents)
+        } yield hookResponse(hookResult)
       }
     }
   }

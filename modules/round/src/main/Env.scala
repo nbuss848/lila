@@ -6,7 +6,7 @@ import com.typesafe.config.Config
 import scala.concurrent.duration._
 
 import actorApi.{ GetSocketStatus, SocketStatus }
-import lila.common.PimpedConfig._
+
 import lila.game.{ Game, Pov }
 import lila.hub.actorApi.HasUserId
 import lila.hub.actorApi.map.{ Ask, Tell }
@@ -28,7 +28,6 @@ final class Env(
     notifyApi: lila.notify.NotifyApi,
     uciMemo: lila.game.UciMemo,
     rematch960Cache: lila.memo.ExpireSetMemo,
-    isRematchCache: lila.memo.ExpireSetMemo,
     onStart: String => Unit,
     divider: lila.game.Divider,
     prefApi: lila.pref.PrefApi,
@@ -48,7 +47,6 @@ final class Env(
     val SocketTimeout = config duration "socket.timeout"
     val NetDomain = config getString "net.domain"
     val ActorMapName = config getString "actor.map.name"
-    val CasualOnly = config getBoolean "casual_only"
     val ActiveTtl = config duration "active.ttl"
     val CollectionNote = config getString "collection.note"
     val CollectionHistory = config getString "collection.history"
@@ -57,6 +55,8 @@ final class Env(
     val ChannelMoveTime = config getString "channel.move_time.name "
   }
   import settings._
+
+  private val bus = system.lilaBus
 
   private val moveTimeChannel = system.actorOf(Props(classOf[lila.socket.Channel]), name = ChannelMoveTime)
 
@@ -73,13 +73,15 @@ final class Env(
       drawer = drawer,
       forecastApi = forecastApi,
       socketHub = socketHub,
+      awakeWith = tell(id),
       moretimeDuration = Moretime,
       activeTtl = ActiveTtl
     )
+    def tell(id: Game.ID)(msg: Any): Unit = self ! Tell(id, msg)
     def receive: Receive = ({
       case actorApi.GetNbRounds =>
         nbRounds = size
-        system.lilaBus.publish(lila.hub.actorApi.round.NbRounds(nbRounds), 'nbRounds)
+        bus.publish(lila.hub.actorApi.round.NbRounds(nbRounds), 'nbRounds)
     }: Receive) orElse actorMapReceive
   }), name = ActorMapName)
 
@@ -117,7 +119,7 @@ final class Env(
       }),
       name = SocketName
     )
-    system.lilaBus.subscribe(actor, 'tvSelect, 'startGame, 'deploy)
+    bus.subscribe(actor, 'tvSelect, 'startGame, 'deploy)
     actor
   }
 
@@ -130,7 +132,7 @@ final class Env(
     messenger = messenger,
     evalCacheHandler = evalCacheHandler,
     selfReport = selfReport,
-    bus = system.lilaBus
+    bus = bus
   )
 
   lazy val perfsUpdater = new PerfsUpdater(historyApi, rankingApi)
@@ -152,21 +154,19 @@ final class Env(
     crosstableApi = crosstableApi,
     notifier = notifier,
     playban = playban,
-    bus = system.lilaBus,
-    casualOnly = CasualOnly,
+    bus = bus,
     getSocketStatus = getSocketStatus
   )
 
   private lazy val rematcher = new Rematcher(
     messenger = messenger,
     onStart = onStart,
-    rematch960Cache = rematch960Cache,
-    isRematchCache = isRematchCache
+    rematch960Cache = rematch960Cache
   )
 
   private lazy val player: Player = new Player(
     fishnetPlayer = fishnetPlayer,
-    bus = system.lilaBus,
+    bus = bus,
     finisher = finisher,
     uciMemo = uciMemo
   )
@@ -174,10 +174,13 @@ final class Env(
   private lazy val drawer = new Drawer(
     prefApi = prefApi,
     messenger = messenger,
-    finisher = finisher
+    finisher = finisher,
+    bus = bus
   )
 
-  lazy val messenger = new Messenger(chat = hub.actor.chat)
+  lazy val messenger = new Messenger(
+    chat = hub.actor.chat
+  )
 
   def version(gameId: String): Fu[Int] =
     socketHub ? Ask(gameId, GetVersion) mapTo manifest[Int]
@@ -210,7 +213,7 @@ final class Env(
     name = "titivate"
   )
 
-  system.lilaBus.subscribe(system.actorOf(
+  bus.subscribe(system.actorOf(
     Props(new CorresAlarm(db(CollectionAlarm), hub.socket.round)),
     name = "corres-alarm"
   ), 'moveEventCorres, 'finishGame)
@@ -218,18 +221,19 @@ final class Env(
   lazy val takebacker = new Takebacker(
     messenger = messenger,
     uciMemo = uciMemo,
-    prefApi = prefApi
+    prefApi = prefApi,
+    bus = bus
   )
 
   val tvBroadcast = system.actorOf(Props(classOf[TvBroadcast]))
-  system.lilaBus.subscribe(tvBroadcast, 'moveEvent, 'changeFeaturedGame)
+  bus.subscribe(tvBroadcast, 'moveEvent, 'changeFeaturedGame)
 
-  def checkOutoftime(game: Game) {
+  def checkOutoftime(game: Game): Unit = {
     if (game.playable && game.started && !game.isUnlimited)
       roundMap ! Tell(game.id, actorApi.round.QuietFlag)
   }
 
-  def resign(pov: Pov) {
+  def resign(pov: Pov): Unit = {
     if (pov.game.abortable)
       roundMap ! Tell(pov.game.id, actorApi.round.Abort(pov.playerId))
     else if (pov.game.playable)
@@ -254,7 +258,6 @@ object Env {
     notifyApi = lila.notify.Env.current.api,
     uciMemo = lila.game.Env.current.uciMemo,
     rematch960Cache = lila.game.Env.current.cached.rematch960,
-    isRematchCache = lila.game.Env.current.cached.isRematch,
     onStart = lila.game.Env.current.onStart,
     divider = lila.game.Env.current.divider,
     prefApi = lila.pref.Env.current.api,

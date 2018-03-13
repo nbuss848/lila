@@ -215,7 +215,11 @@ export default class LobbyController {
 
   setRedirecting = () => {
     this.redirecting = true;
-    setTimeout(() => this.redirecting = false, 2000);
+    setTimeout(() => {
+      this.redirecting = false;
+      this.redraw();
+    }, 3000);
+    this.redraw();
   };
 
   awake = () => {
@@ -233,9 +237,9 @@ export default class LobbyController {
   // after click on round "new opponent" button
   private onNewOpponent() {
     if (location.hash.indexOf('#pool/') === 0) {
-      const regex = /^#pool\/(\d+\+\d+)$/,
+      const regex = /^#pool\/(\d+\+\d+)(?:\/(.+))?$/,
       match = regex.exec(location.hash),
-      member: any = { id: match![1] },
+      member: any = { id: match![1], blocking: match![2] },
       range = poolRangeStorage.get(member.id);
       if (range) member.range = range;
       if (match) {

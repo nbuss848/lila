@@ -27,7 +27,7 @@ export default function(ctrl: LobbyController) {
                 const lm = pov.lastMove;
                 const config = {
                   coordinates: false,
-                  drawable: { enabled: false },
+                  drawable: { enabled: false, visible: false },
                   resizable: false,
                   viewOnly: true,
                   orientation: pov.variant.key === 'racingKings' ? 'white' : pov.color,
@@ -43,7 +43,7 @@ export default function(ctrl: LobbyController) {
           pov.opponent.ai ? ctrl.trans('aiNameLevelAiLevel', 'Stockfish', pov.opponent.ai) : pov.opponent.username,
           h('span.indicator',
             pov.isMyTurn ?
-            (pov.secondsLeft ? timer(pov) : ctrl.trans('yourTurn')) :
+            (pov.secondsLeft ? timer(pov) : [ctrl.trans.noarg('yourTurn')]) :
             h('span', {
               hook: {
                 insert(vnode) {

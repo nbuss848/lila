@@ -20,7 +20,7 @@ final class DataForm {
     minutes = minuteDefault,
     waitMinutes = waitMinuteDefault,
     variant = chess.variant.Standard.id,
-    position = StartingPosition.initial.eco,
+    position = StartingPosition.initial.fen,
     `private` = None,
     password = None,
     mode = Mode.Rated.id.some
@@ -42,14 +42,16 @@ final class DataForm {
     "minutes" -> numberIn(minutePrivateChoices),
     "waitMinutes" -> numberIn(waitMinuteChoices),
     "variant" -> number.verifying(validVariantIds contains _),
-    "position" -> nonEmptyText.verifying(positions contains _),
+    "position" -> nonEmptyText,
     "mode" -> optional(number.verifying(Mode.all map (_.id) contains _)),
     "private" -> optional(text.verifying("on" == _)),
     "password" -> optional(nonEmptyText)
   )(TournamentSetup.apply)(TournamentSetup.unapply)
     .verifying("Invalid clock", _.validClock)
     .verifying("15s variant games cannot be rated", _.validRatedUltraBulletVariant)
-    .verifying("Increase tournament duration, or decrease game clock", _.validTiming))
+    .verifying("Increase tournament duration, or decrease game clock", _.validTiming)
+    .verifying("These settings will only work for private tournaments", _.validPublic) // very rare, do not translate
+  )
 }
 
 object DataForm {
@@ -86,15 +88,18 @@ object DataForm {
   val waitMinuteChoices = options(waitMinutes, "%d minute{s}")
   val waitMinuteDefault = 5
 
-  val positions = StartingPosition.allWithInitial.map(_.eco)
+  val positions = StartingPosition.allWithInitial.map(_.fen)
   val positionChoices = StartingPosition.allWithInitial.map { p =>
-    p.eco -> p.fullName
+    p.fen -> p.fullName
   }
-  val positionDefault = StartingPosition.initial.eco
+  val positionDefault = StartingPosition.initial.fen
 
   val validVariants = List(Standard, Chess960, KingOfTheHill, ThreeCheck, Antichess, Atomic, Horde, RacingKings, Crazyhouse)
 
   val validVariantIds = validVariants.map(_.id).toSet
+
+  def startingPosition(fen: String, variant: Variant): StartingPosition =
+    Thematic.byFen(fen).ifTrue(variant.standard) | StartingPosition.initial
 }
 
 private[tournament] case class TournamentSetup(
@@ -113,6 +118,12 @@ private[tournament] case class TournamentSetup(
   def validClock = (clockTime + clockIncrement) > 0
 
   def validTiming = (minutes * 60) >= (3 * estimatedGameDuration)
+
+  def validPublic = isPrivate || {
+    DataForm.clockTimes.contains(clockTime) &&
+      DataForm.clockIncrements.contains(clockIncrement) &&
+      DataForm.minutes.contains(minutes)
+  }
 
   def realMode = mode.fold(Mode.default)(Mode.orDefault)
 

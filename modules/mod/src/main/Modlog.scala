@@ -2,6 +2,8 @@ package lila.mod
 
 import org.joda.time.DateTime
 
+import lila.report.{ Mod, Suspect }
+
 case class Modlog(
     mod: String,
     user: Option[String],
@@ -20,6 +22,7 @@ case class Modlog(
     case Modlog.ipban => "ban IPs"
     case Modlog.ipunban => "unban IPs"
     case Modlog.closeAccount => "close account"
+    case Modlog.selfCloseAccount => "self close account"
     case Modlog.reopenAccount => "reopen account"
     case Modlog.openTopic => "reopen topic"
     case Modlog.closeTopic => "close topic"
@@ -44,7 +47,13 @@ case class Modlog(
     case Modlog.kickFromRankings => "kick from rankings"
     case Modlog.reportban => "reportban"
     case Modlog.unreportban => "un-reportban"
+    case Modlog.rankban => "rankban"
+    case Modlog.unrankban => "un-rankban"
     case Modlog.modMessage => "send message"
+    case Modlog.coachReview => "disapprove coach review"
+    case Modlog.cheatDetected => "game lost by cheat detection"
+    case Modlog.cli => "run CLI command"
+    case Modlog.garbageCollect => "garbage collect"
     case a => a
   }
 
@@ -52,6 +61,14 @@ case class Modlog(
 }
 
 object Modlog {
+
+  def make(mod: Mod, sus: Suspect, action: String, details: Option[String] = None): Modlog =
+    Modlog(
+      mod = mod.user.id,
+      user = sus.user.id.some,
+      action = action,
+      details = details
+    )
 
   val engine = "engine"
   val unengine = "unengine"
@@ -63,6 +80,7 @@ object Modlog {
   val ban = "ban"
   val ipban = "ipban"
   val closeAccount = "closeAccount"
+  val selfCloseAccount = "selfCloseAccount"
   val reopenAccount = "reopenAccount"
   val ipunban = "ipunban"
   val deletePost = "deletePost"
@@ -86,5 +104,11 @@ object Modlog {
   val kickFromRankings = "kickFromRankings"
   val reportban = "reportban"
   val unreportban = "unreportban"
+  val rankban = "rankban"
+  val unrankban = "unrankban"
   val modMessage = "modMessage"
+  val coachReview = "coachReview"
+  val cheatDetected = "cheatDetected"
+  val cli = "cli"
+  val garbageCollect = "garbageCollect"
 }

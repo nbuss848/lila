@@ -27,7 +27,8 @@ case class User(
     kid: Boolean,
     lang: Option[String],
     plan: Plan,
-    reportban: Boolean = false
+    reportban: Boolean = false,
+    rankban: Boolean = false
 ) extends Ordered[User] {
 
   override def equals(other: Any) = other match {
@@ -84,16 +85,17 @@ case class User(
 
   def lightCount = User.LightCount(light, count.game)
 
-  private def best4Of(perfTypes: List[PerfType]) =
+  private def bestOf(perfTypes: List[PerfType], nb: Int) =
     perfTypes.sortBy { pt =>
       -(perfs(pt).nb * PerfType.totalTimeRoughEstimation.get(pt).fold(0)(_.centis))
-    } take 4
+    } take nb
 
-  private val firstRow = List(PerfType.Bullet, PerfType.Blitz, PerfType.Classical, PerfType.Correspondence)
-  private val secondRow = List(PerfType.UltraBullet, PerfType.Crazyhouse, PerfType.Chess960, PerfType.KingOfTheHill, PerfType.ThreeCheck, PerfType.Antichess, PerfType.Atomic, PerfType.Horde, PerfType.RacingKings)
+  private val firstRow: List[PerfType] = List(PerfType.Bullet, PerfType.Blitz, PerfType.Rapid, PerfType.Classical, PerfType.Correspondence)
+  private val secondRow: List[PerfType] = List(PerfType.UltraBullet, PerfType.Crazyhouse, PerfType.Chess960, PerfType.KingOfTheHill, PerfType.ThreeCheck, PerfType.Antichess, PerfType.Atomic, PerfType.Horde, PerfType.RacingKings)
 
-  def best8Perfs: List[PerfType] =
-    best4Of(firstRow) ::: best4Of(secondRow)
+  def best8Perfs: List[PerfType] = bestOf(firstRow, 4) ::: bestOf(secondRow, 4)
+
+  def best6Perfs: List[PerfType] = bestOf(firstRow ::: secondRow, 6)
 
   def hasEstablishedRating(pt: PerfType) = perfs(pt).established
 
@@ -104,15 +106,21 @@ case class User(
   def planMonths: Option[Int] = activePlan.map(_.months)
 
   def createdSinceDays(days: Int) = createdAt isBefore DateTime.now.minusDays(days)
+
+  def is(name: String) = id == User.normalize(name)
 }
 
 object User {
 
   type ID = String
 
-  type CredentialCheck = String => Boolean
+  type CredentialCheck = ClearPassword => Boolean
   case class LoginCandidate(user: User, check: CredentialCheck) {
-    def apply(password: String): Option[User] = check(password) option user
+    def apply(p: ClearPassword): Option[User] = {
+      val res = check(p)
+      lila.mon.user.auth.result(res)()
+      res option user
+    }
   }
 
   val anonymous = "Anonymous"
@@ -126,6 +134,10 @@ object User {
 
   case class Emails(current: Option[EmailAddress], previous: Option[EmailAddress])
 
+  case class ClearPassword(value: String) extends AnyVal {
+    override def toString = "ClearPassword(****)"
+  }
+
   case class PlayTime(total: Int, tv: Int) {
     import org.joda.time.Period
     def totalPeriod = new Period(total * 1000l)
@@ -136,10 +148,16 @@ object User {
 
   // what existing usernames are like
   val historicalUsernameRegex = """(?i)[a-z0-9][\w-]*[a-z0-9]""".r
-  // what new usernames should be like
+  // what new usernames should be like -- now split into further parts for clearer error messages
   val newUsernameRegex = """(?i)[a-z][\w-]*[a-z0-9]""".r
 
-  def couldBeUsername(str: User.ID) = historicalUsernameRegex.pattern.matcher(str).matches
+  val newUsernamePrefix = """(?i)[a-z].*""".r
+
+  val newUsernameSuffix = """(?i).*[a-z0-9]""".r
+
+  val newUsernameChars = """(?i)[\w-]*""".r
+
+  def couldBeUsername(str: User.ID) = historicalUsernameRegex.pattern.matcher(str).matches && str.size < 30
 
   def normalize(username: String) = username.toLowerCase
 
@@ -188,6 +206,10 @@ object User {
     val colorIt = "colorIt"
     val plan = "plan"
     val reportban = "reportban"
+    val rankban = "rankban"
+    val salt = "salt"
+    val bpass = "bpass"
+    val sha512 = "sha512"
   }
 
   import lila.db.BSON
@@ -222,7 +244,8 @@ object User {
       lang = r strO lang,
       title = r strO title,
       plan = r.getO[Plan](plan) | Plan.empty,
-      reportban = r boolD reportban
+      reportban = r boolD reportban,
+      rankban = r boolD rankban
     )
 
     def writes(w: BSON.Writer, o: User) = BSONDocument(
@@ -245,7 +268,8 @@ object User {
       lang -> o.lang,
       title -> o.title,
       plan -> o.plan.nonEmpty,
-      reportban -> w.boolO(o.reportban)
+      reportban -> w.boolO(o.reportban),
+      rankban -> w.boolO(o.rankban)
     )
   }
 }

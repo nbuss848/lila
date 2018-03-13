@@ -25,11 +25,11 @@ object Translator {
           }
         } catch {
           case e: Exception =>
-            logger.warn(s"Failed to format html $key -> $translation (${args.toList})", e)
+            logger.warn(s"Failed to format html $db/$lang/$key -> $translation (${args.toList})", e)
             Some(Html(key))
         }
       } getOrElse {
-        logger.warn(s"No translation found for $quantity $key in $lang")
+        logger.info(s"No translation found for $quantity $key in $lang")
         Html(key)
       }
 
@@ -61,7 +61,7 @@ object Translator {
             Some(key)
         }
       } getOrElse {
-        logger.warn(s"No translation found for $quantity $db/$lang/$key in $lang")
+        logger.info(s"No translation found for $quantity $db/$lang/$key in $lang")
         key
       }
   }

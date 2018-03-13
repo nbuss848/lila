@@ -39,7 +39,7 @@ private final class Indexer(storage: Storage, sequencer: ActorRef) {
   private def gameQuery(user: User) = Query.user(user.id) ++
     Query.rated ++
     Query.finished ++
-    Query.turnsMoreThan(2) ++
+    Query.turnsGt(2) ++
     Query.notFromPosition ++
     Query.notHordeOrSincePawnsAreWhite
 
@@ -70,7 +70,7 @@ private final class Indexer(storage: Storage, sequencer: ActorRef) {
         PovToEntry(game, user.id, provisional = nb < 10).addFailureEffect { e =>
           println(e)
           e.printStackTrace
-        } map (_.toOption)
+        } map (_.right.toOption)
       }
       val query = gameQuery(user) ++ $doc(Game.BSONFields.createdAt $gte from)
       GameRepo.sortedCursor(query, Query.sortChronological)

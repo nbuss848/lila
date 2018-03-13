@@ -40,15 +40,14 @@
       @game.pgnImport.flatMap(_.date).map { date =>
       Imported
       @game.pgnImport.flatMap(_.user).map { user =>
-      by
-      @userIdLink(user.some, None, false)
+      by @userIdLink(user.some, None, false)
       <br />
       }
       }
     </div>
     <div class="players">
       @List(game.whitePlayer, game.blackPlayer).map { p =>
-      <div class="player color-icon is @{p.color.name}">
+      <div class="player color-icon is @{p.color.name} text">
         @playerLink(p, withOnline = false, withDiff = true, withBerserk = true)
       </div>
       }
@@ -69,6 +68,10 @@
     }
     }
   </div>
+
+  @game.userIds.filter(isStreaming).map { id =>
+  <a href="@routes.Streamer.show(id)" class="context-streamer text side_box" data-icon="">@usernameOrId(id) is streaming</a>
+  }
 
   @userTv.map { u =>
   <div class="side_box">

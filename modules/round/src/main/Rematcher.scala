@@ -14,8 +14,7 @@ import lila.user.{ User, UserRepo }
 private[round] final class Rematcher(
     messenger: Messenger,
     onStart: String => Unit,
-    rematch960Cache: ExpireSetMemo,
-    isRematchCache: ExpireSetMemo
+    rematch960Cache: ExpireSetMemo
 ) {
 
   private val rematchCreated: Cache[Game.ID, Game.ID] = Scaffeine()
@@ -55,7 +54,6 @@ private[round] final class Rematcher(
         _ ← (GameRepo insertDenormalized nextGame) >>
           GameRepo.saveNext(pov.game, nextGame.id) >>-
           messenger.system(pov.game, _.rematchOfferAccepted) >>- {
-            isRematchCache.put(nextGame.id)
             if (pov.game.variant == Chess960 && !rematch960Cache.get(pov.game.id))
               rematch960Cache.put(nextGame.id)
           }
@@ -83,12 +81,12 @@ private[round] final class Rematcher(
     }
     users <- UserRepo byIds pov.game.userIds
   } yield Game.make(
-    game = ChessGame(
+    chess = ChessGame(
       situation = Situation(
         board = Board(pieces, variant = pov.game.variant).withCastles {
           situation.fold(Castles.init)(_.situation.board.history.castles)
         },
-        color = White
+        color = situation.fold[chess.Color](White)(_.situation.color)
       ),
       clock = pov.game.clock map { c => Clock(c.config) },
       turns = situation ?? (_.turns),
@@ -97,20 +95,20 @@ private[round] final class Rematcher(
     whitePlayer = returnPlayer(pov.game, White, users),
     blackPlayer = returnPlayer(pov.game, Black, users),
     mode = if (users.exists(_.lame)) chess.Mode.Casual else pov.game.mode,
-    variant = pov.game.variant,
     source = pov.game.source | Source.Lobby,
     daysPerTurn = pov.game.daysPerTurn,
     pgnImport = None
   )
 
-  private def returnPlayer(game: Game, color: ChessColor, users: List[User]): lila.game.Player = {
-    val player = lila.game.Player.make(color = color, aiLevel = game.opponent(color).aiLevel)
-    game.player(!color).userId.flatMap { id =>
-      users.find(_.id == id)
-    }.fold(player) { user =>
-      player.withUser(user.id, PerfPicker.mainOrDefault(game)(user.perfs))
+  private def returnPlayer(game: Game, color: ChessColor, users: List[User]): lila.game.Player =
+    game.opponent(color).aiLevel match {
+      case Some(ai) => lila.game.Player.make(color, ai.some)
+      case None => lila.game.Player.make(
+        color,
+        game.opponent(color).userId.flatMap { id => users.find(_.id == id) },
+        PerfPicker.mainOrDefault(game)
+      )
     }
-  }
 
   private def redirectEvents(game: Game): Events = {
     val whiteId = game fullIdOf White

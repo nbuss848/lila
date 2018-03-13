@@ -1,11 +1,9 @@
 package lila.game
 
 import chess.format.Forsyth
-import chess.format.pgn.{ Pgn, Tag, TagType, Parser, ParsedPgn }
+import chess.format.pgn.{ Pgn, Tag, Tags, TagType, Parser, ParsedPgn }
 import chess.format.{ pgn => chessPgn }
 import chess.{ Centis, Color }
-import org.joda.time.DateTimeZone
-import org.joda.time.format.DateTimeFormat
 
 import lila.common.LightUser
 
@@ -21,7 +19,7 @@ final class PgnDump(
       Parser.full(pgni.pgn).toOption
     }
     val ts = tags(game, initialFen, imported)
-    val fenSituation = ts find (_.name == Tag.FEN) flatMap { case Tag(_, fen) => Forsyth <<< fen }
+    val fenSituation = ts.fen.map(_.value) flatMap Forsyth.<<<
     val moves2 = fenSituation.??(_.situation.color.black).fold(".." +: game.pgnMoves, game.pgnMoves)
     val turns = makeTurns(
       moves2,
@@ -76,19 +74,19 @@ final class PgnDump(
     game: Game,
     initialFen: Option[String],
     imported: Option[ParsedPgn]
-  ): List[Tag] = gameLightUsers(game) match {
-    case (wu, bu) =>
-      val importedDate = imported.flatMap(_ tag "date")
+  ): Tags = gameLightUsers(game) match {
+    case (wu, bu) => Tags {
+      val importedDate = imported.flatMap(_.tags(_.Date))
       List[Option[Tag]](
-        Tag(_.Event, imported.flatMap(_ tag "event") | { if (game.imported) "Import" else eventOf(game) }).some,
+        Tag(_.Event, imported.flatMap(_.tags(_.Event)) | { if (game.imported) "Import" else eventOf(game) }).some,
         Tag(_.Site, gameUrl(game.id)).some,
         Tag(_.Date, importedDate | Tag.UTCDate.format.print(game.createdAt)).some,
-        Tag(_.Round, imported.flatMap(_ tag "round") | "-").some,
+        Tag(_.Round, imported.flatMap(_.tags(_.Round)) | "-").some,
         Tag(_.White, player(game.whitePlayer, wu)).some,
         Tag(_.Black, player(game.blackPlayer, bu)).some,
         Tag(_.Result, result(game)).some,
-        importedDate.isEmpty option Tag(_.UTCDate, imported.flatMap(_ tag "utcdate") | Tag.UTCDate.format.print(game.createdAt)),
-        importedDate.isEmpty option Tag(_.UTCTime, imported.flatMap(_ tag "utctime") | Tag.UTCTime.format.print(game.createdAt)),
+        importedDate.isEmpty option Tag(_.UTCDate, imported.flatMap(_.tags(_.UTCDate)) | Tag.UTCDate.format.print(game.createdAt)),
+        importedDate.isEmpty option Tag(_.UTCTime, imported.flatMap(_.tags(_.UTCTime)) | Tag.UTCTime.format.print(game.createdAt)),
         Tag(_.WhiteElo, rating(game.whitePlayer)).some,
         Tag(_.BlackElo, rating(game.blackPlayer)).some,
         ratingDiffTag(game.whitePlayer, _.WhiteRatingDiff),
@@ -96,7 +94,7 @@ final class PgnDump(
         wu.flatMap(_.title).map { t => Tag(_.WhiteTitle, t) },
         bu.flatMap(_.title).map { t => Tag(_.BlackTitle, t) },
         Tag(_.Variant, game.variant.name.capitalize).some,
-        Tag(_.TimeControl, game.clock.fold("-") { c => s"${c.limit.roundSeconds}+${c.increment.roundSeconds}" }).some,
+        Tag.timeControl(game.clock.map(_.config)).some,
         Tag(_.ECO, game.opening.fold("?")(_.opening.eco)).some,
         Tag(_.Opening, game.opening.fold("?")(_.opening.name)).some,
         Tag(_.Termination, {
@@ -114,6 +112,7 @@ final class PgnDump(
           Tag(_.FEN, initialFen | "?"),
           Tag("SetUp", "1")
         ))
+    }
   }
 
   private def makeTurns(moves: Seq[String], from: Int, clocks: Vector[Centis], startColor: Color): List[chessPgn.Turn] =
@@ -145,6 +144,6 @@ object PgnDump {
   )
 
   def result(game: Game) =
-    if (game.finished) game.winnerColor.fold("1/2-1/2")(_.fold("1-0", "0-1"))
+    if (game.finished) Color.showResult(game.winnerColor)
     else "*"
 }

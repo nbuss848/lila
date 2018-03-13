@@ -1,4 +1,6 @@
-@(data: play.api.libs.json.JsObject, userTimeline: Vector[lila.timeline.Entry], forumRecent: List[lila.forum.MiniForumPost], tours: List[Tournament], events: List[lila.event.Event], simuls: List[lila.simul.Simul], featured: Option[Game], leaderboard: List[User.LightPerf], tournamentWinners: List[lila.tournament.Winner], puzzle: Option[lila.puzzle.DailyPuzzle], streams: List[lila.tv.StreamOnAir], lastPost: List[lila.blog.MiniPost], playban: Option[lila.playban.TempBan], currentGame: Option[lila.app.mashup.Preload.CurrentGame], nbRounds: Int)(implicit ctx: Context)
+@(data: play.api.libs.json.JsObject, userTimeline: Vector[lila.timeline.Entry], forumRecent: List[lila.forum.MiniForumPost], tours: List[Tournament], events: List[lila.event.Event], simuls: List[lila.simul.Simul], featured: Option[Game], leaderboard: List[User.LightPerf], tournamentWinners: List[lila.tournament.Winner], puzzle: Option[lila.puzzle.DailyPuzzle], streams: lila.streamer.LiveStreams.WithTitles, lastPost: List[lila.blog.MiniPost], playban: Option[lila.playban.TempBan], currentGame: Option[lila.app.mashup.Preload.CurrentGame], nbRounds: Int)(implicit ctx: Context)
+
+@import play.api.libs.json.Json
 
 @underchat = {
 <div id="featured_game">
@@ -11,12 +13,12 @@
 
 @side = {
 @NotForKids {
-<div id="streams_on_air">@tv.streamsOnAir(streams)</div>
+<div id="streams_on_air">@streamer.liveStreams(streams)</div>
 }
 @events.map { e =>
 @event.homepageSpotlight(e)
 }
-@lila.tournament.Spotlight.select(tours, ctx.me).map { tour =>
+@lila.tournament.Spotlight.select(tours, ctx.me, 3).map { tour =>
 @tournament.homepageSpotlight(tour)
 }
 @simuls.find(_.spotlightable).take(2).map { s =>
@@ -30,6 +32,11 @@
     <a class="more" href="@routes.Timeline.home">@trans.more() »</a>
     }
   </div>
+</div>
+}.getOrElse {
+<div class="about-side">
+  lichess.org is a <a class="blue" href="@routes.Plan.features">(really) free</a>, no-ads, open source chess server.<br />
+  <a class="blue" href="/about">Read more about lichess.org</a>
 </div>
 }
 }
@@ -57,12 +64,12 @@
 @embedJs {
 window.customWS = true;
 lichess_lobby = {
-data: @Html(J.stringify(data)),
-playban: @playban.fold(Html("null")){ pb =>
-@Html(J.stringify(J.obj("minutes" -> pb.mins, "remainingSeconds" -> (pb.remainingSeconds + 3))))
+data: @safeJson(data),
+playban: @htmlOrNull(playban) { pb =>
+@safeJson(Json.obj("minutes" -> pb.mins, "remainingSeconds" -> (pb.remainingSeconds + 3)))
 },
-currentGame: @currentGame.fold(Html("null")) { cg =>
-@Html(J.stringify(cg.json))
+currentGame: @htmlOrNull(currentGame) { cg =>
+@safeJson(cg.json)
 },
 i18n: @jsI18n()
 };
@@ -88,7 +95,7 @@ asyncJs = true) {
 <div class="lobby_and_ground@if(playban.isDefined){ playban}@if(currentGame.isDefined){ current_game}">
   @currentGame.map(currentGameInfo(_))
   <div id="hooks_wrap"></div>
-  @playban.map(playbanInfo(_))
+  @playban.map(ban => playbanInfo(ban.remainingSeconds))
   <div id="start_buttons" class="lichess_ground">
     <a class="fat button config_hook hint--bottom@if(playban.isDefined || currentGame.isDefined){ disabled}" href="@routes.Setup.hookForm" onclick="return false">@trans.createAGame()</a>
     <a class="fat button config_friend hint--bottom@if(currentGame.isDefined){ disabled}" href="@routes.Setup.friendForm(none)" onclick="return false">@trans.playWithAFriend()</a>
@@ -136,7 +143,7 @@ asyncJs = true) {
             <tr>
               <td>@lightUserLink(l.user)</td>
               @lila.rating.PerfType(l.perfKey).map { pt =>
-              <td data-icon="@pt.iconChar">@l.rating</td>
+              <td data-icon="@pt.iconChar" class="text">@l.rating</td>
               }
               <td>@showProgress(l.progress, withTitle = false)</td>
             </tr>
@@ -216,4 +223,5 @@ asyncJs = true) {
     <span>@trans.playChessInStyle()</span>
   </a>
 </div>
+<div class="about-footer"><a href="/about">About lichess.org</a></div>
 }

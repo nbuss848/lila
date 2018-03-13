@@ -163,7 +163,6 @@
   <string name="changePassword">Vaihda salasana</string>
   <string name="changeEmail">Vaihda sähköpostiosoitetta</string>
   <string name="email">Sähköpostiosoite</string>
-  <string name="emailIsOptional">Sähköposti ei ole pakollinen. Lichess käyttää sähköpostiasi salasanan uusimiseen jos unohdat sen.</string>
   <string name="passwordReset">Salasanan uusiminen</string>
   <string name="forgotPassword">Unohditko salasanasi?</string>
   <string name="rank">Sijoitus</string>
@@ -286,6 +285,7 @@
   </plurals>
   <string name="yourPerfRatingIsProvisional">Vahvuuslukusi %s on tilapäinen</string>
   <string name="yourPerfRatingIsTooHigh">%1$s-vahvuuslukusi (%2$s) on liian suuri</string>
+  <string name="yourTopWeeklyPerfRatingIsTooHigh">Viikon korkein %1$s-vahvuuslukusi (%2$s) on liian suuri</string>
   <string name="yourPerfRatingIsTooLow">%1$s-vahvuuslukusi (%2$s) ei riitä</string>
   <string name="ratedMoreThanInPerf">%2$s-vahvuusluku ≥ %1$s</string>
   <string name="ratedLessThanInPerf">%2$s-vahvuusluku ≤ %1$s</string>
@@ -449,10 +449,6 @@
   <string name="retryThisPuzzle">Yritä uudestaan</string>
   <string name="thisPuzzleIsCorrect">Tämä tehtävä toimii ja on mielenkiintoinen</string>
   <string name="thisPuzzleIsWrong">Tämä tehtävä on tylsä tai virheellinen</string>
-  <plurals name="youHaveNbSecondsToMakeYourFirstMove">
-    <item quantity="one">Sinulla on %s sekuntia aikaa ensimmäisen siirtosi tekemiseen</item>
-    <item quantity="other">Sinulla on %s sekuntia aikaa ensimmäisen siirtosi tekemiseen</item>
-  </plurals>
   <plurals name="nbGamesInPlay">
     <item quantity="one">%s peliä meneillään</item>
     <item quantity="other">%s peliä meneillään</item>
@@ -674,8 +670,6 @@
   <string name="checkYourEmail">Tarkista sähköpostisi</string>
   <string name="weHaveSentYouAnEmailClickTheLink">Olemme lähettäneet sinulle sähköpostiviestin. Klikkaa viestissä olevaa linkkiä aktivoidaksesi tilisi.</string>
   <string name="ifYouDoNotSeeTheEmailCheckOtherPlaces">Jos et näe viestiä, tarkista muut paikat joihin se voi olla joutunut (kuten roskaposti- ja spämmikansiot).</string>
-  <string name="areYouSureYouEvenRegisteredYourEmailOnLichess">Oletko varma että olet antanut sähköpostiosoitteesi lichessille?</string>
-  <string name="itWasNotRequiredForYourRegistration">Sitä ei tarvittu rekisteröitymiseen.</string>
   <string name="weHaveSentYouAnEmailTo">Olemme lähettäneet sähköpostiviestin osoitteeseen %s. Klikkaa viestissä olevaa linkkiä nollataksesi salasanasi.</string>
   <string name="byRegisteringYouAgreeToBeBoundByOur">Rekistöitymällä hyväksyt lichessin %s ja sitoudut noudattamaan niitä.</string>
   <string name="networkLagBetweenYouAndLichess">Verkkoviive sinun ja lichessin välillä</string>
@@ -744,8 +738,6 @@
   <string name="pieceSet">Nappuloiden tyyli</string>
   <string name="embedInYourWebsite">Upota sivustollesi</string>
   <string name="usernameAlreadyUsed">Käyttäjänimi varattu, kokeile jotain toista.</string>
-  <string name="usernameInvalid">Käyttäjänimi ei kelpaa. Vain kirjaimet, numerot, alaviivat ja viivamerkit ovat sallittuja.</string>
-  <string name="usernameStartNoNumber">Käyttäjänimi ei voi alkaa numerolla.</string>
   <string name="usernameUnacceptable">Käyttäjänimi ei kelpaa.</string>
   <string name="directlySupportLichess">Lahjoita Lichessille</string>
   <string name="playChessInStyle">Tyylikästä shakinpeluuta</string>

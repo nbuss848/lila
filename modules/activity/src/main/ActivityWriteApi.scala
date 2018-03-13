@@ -1,6 +1,5 @@
 package lila.activity
 
-import lila.analyse.Analysis
 import lila.db.dsl._
 import lila.game.Game
 import lila.study.Study
@@ -86,6 +85,16 @@ final class ActivityWriteApi(
         a.copy(follows = Some(~a.follows addIn from)).some
       }
 
+  def unfollowAll(from: User, following: Set[User.ID]) = {
+    logger.info(s"${from.id} unfollow ${following.size} users")
+    following.map { userId =>
+      coll.update(
+        regexId(userId) ++ $doc("f.i.ids" -> from.id),
+        $pull("f.i.ids" -> from.id)
+      )
+    }.sequenceFu.void
+  }
+
   def study(id: Study.Id) = studyApi byId id flatMap {
     _.filter(_.isPublic) ?? { s =>
       update(s.ownerId) { a =>
@@ -94,10 +103,13 @@ final class ActivityWriteApi(
     }
   }
 
-  def team(id: String, userId: String) =
+  def team(id: String, userId: User.ID) =
     update(userId) { a =>
       a.copy(teams = Some(~a.teams + id)).some
     }
+
+  def streamStart(userId: User.ID) =
+    update(userId) { _.copy(stream = true).some }
 
   private def simulParticipant(simul: lila.simul.Simul, userId: String, host: Boolean) =
     update(userId) { a => a.copy(simuls = Some(~a.simuls + SimulId(simul.id))).some }

@@ -56,7 +56,7 @@ private[controllers] trait LilaController
   protected def Open[A](p: BodyParser[A])(f: Context => Fu[Result]): Action[A] =
     Action.async(p) { req =>
       CSRF(req) {
-        reqToCtx(req) flatMap f
+        reqToCtx(req) flatMap f recover oauthFailure
       }
     }
 
@@ -66,7 +66,7 @@ private[controllers] trait LilaController
   protected def OpenBody[A](p: BodyParser[A])(f: BodyContext[A] => Fu[Result]): Action[A] =
     Action.async(p) { req =>
       CSRF(req) {
-        reqToCtx(req) flatMap f
+        reqToCtx(req) flatMap f recover oauthFailure
       }
     }
 
@@ -78,7 +78,7 @@ private[controllers] trait LilaController
       CSRF(req) {
         reqToCtx(req) flatMap { ctx =>
           ctx.me.fold(authenticationFailed(ctx))(f(ctx))
-        }
+        } recover oauthFailure
       }
     }
 
@@ -90,7 +90,7 @@ private[controllers] trait LilaController
       CSRF(req) {
         reqToCtx(req) flatMap { ctx =>
           ctx.me.fold(authenticationFailed(ctx))(f(ctx))
-        }
+        } recover oauthFailure
       }
     }
 
@@ -119,11 +119,8 @@ private[controllers] trait LilaController
     SecureBody(BodyParsers.parse.anyContent)(perm(Permission))(f)
 
   protected def Firewall[A <: Result](a: => Fu[A])(implicit ctx: Context): Fu[Result] =
-    Env.security.firewall.accepts(ctx.req) flatMap {
-      _ fold (a, {
-        fuccess { Redirect(routes.Lobby.home()) }
-      })
-    }
+    if (Env.security.firewall accepts ctx.req) a
+    else fuccess(Redirect(routes.Lobby.home()))
 
   protected def NoTor(res: => Fu[Result])(implicit ctx: Context) =
     if (Env.security.tor isExitNode HTTPRequest.lastRemoteAddress(ctx.req))
@@ -139,6 +136,9 @@ private[controllers] trait LilaController
   protected def NoLame[A <: Result](a: => Fu[A])(implicit ctx: Context): Fu[Result] =
     NoEngine(NoBooster(a))
 
+  protected def NoShadowban[A <: Result](a: => Fu[A])(implicit ctx: Context): Fu[Result] =
+    ctx.me.??(_.troll).fold(notFound, a)
+
   protected def NoPlayban(a: => Fu[Result])(implicit ctx: Context): Fu[Result] =
     ctx.userId.??(Env.playban.api.currentBan) flatMap {
       _.fold(a) { ban =>
@@ -146,7 +146,7 @@ private[controllers] trait LilaController
           html = Lobby.renderHome(Results.Forbidden),
           api = _ => fuccess {
             Forbidden(jsonError(
-              s"Banned from playing for ${ban.remainingMinutes} minutes. Reason: Too many aborts or unplayed games"
+              s"Banned from playing for ${ban.remainingMinutes} minutes. Reason: Too many aborts, unplayed games, or rage quits."
             )) as JSON
           }
         )
@@ -169,6 +169,10 @@ private[controllers] trait LilaController
 
   protected def NoPlaybanOrCurrent(a: => Fu[Result])(implicit ctx: Context): Fu[Result] =
     NoPlayban(NoCurrentGame(a))
+
+  private val oauthFailure: PartialFunction[Throwable, Result] = {
+    case e: lila.oauth.OauthException => Unauthorized(jsonError(e.message))
+  }
 
   protected def JsonOk[A: Writes](fua: Fu[A]) = fua map { a =>
     Ok(Json toJson a) as JSON
@@ -222,7 +226,7 @@ private[controllers] trait LilaController
 
   def notFound(implicit ctx: Context): Fu[Result] = negotiate(
     html =
-      if (HTTPRequest isSynchronousHttp ctx.req) Main notFound ctx.req
+      if (HTTPRequest isSynchronousHttp ctx.req) fuccess(Main renderNotFound ctx)
       else fuccess(Results.NotFound("Resource not found")),
     api = _ => notFoundJson("Resource not found")
   )
@@ -258,7 +262,10 @@ private[controllers] trait LilaController
 
   protected def authorizationFailed(implicit ctx: Context): Fu[Result] = negotiate(
     html =
-      if (HTTPRequest isSynchronousHttp ctx.req) Main authFailed ctx.req
+      if (HTTPRequest isSynchronousHttp ctx.req) fuccess {
+        lila.mon.http.response.code403()
+        Forbidden(views.html.base.authFailed())
+      }
       else fuccess(Results.Forbidden("Authorization failed")),
     api = _ => fuccess(Forbidden(jsonError("Authorization failed")))
   )
@@ -313,7 +320,7 @@ private[controllers] trait LilaController
       }
     }
 
-  private def getAssetVersion = Env.api.assetVersion.get
+  protected def getAssetVersion = lila.common.AssetVersion(Env.api.assetVersionSetting.get())
 
   private def blindMode(implicit ctx: UserContext) =
     ctx.req.cookies.get(Env.api.Accessibility.blindCookieName) ?? { c =>
@@ -325,7 +332,7 @@ private[controllers] trait LilaController
   private def restoreUser(req: RequestHeader): Fu[RestoredUser] =
     Env.security.api restoreUser req addEffect {
       _ ifTrue (HTTPRequest isSynchronousHttp req) foreach { d =>
-        Env.current.bus.publish(lila.user.User.Active(d.user), 'userActive)
+        Env.current.system.lilaBus.publish(lila.user.User.Active(d.user), 'userActive)
       }
     } flatMap {
       case None => fuccess(None -> None)

@@ -25,7 +25,7 @@ ball
 bastard?
 bewb
 bimbo
-bitch
+bit?ch
 blow
 blowjob
 blumpkin
@@ -86,6 +86,7 @@ jerk
 jizz?(um|)
 kaffir
 kike
+kys
 labia
 lesbo
 masturbat(e|ion|ing)
@@ -169,6 +170,7 @@ wog
 сука
 пизда
 пидор
+пидераст
 pid(a|o)r
 """)
 

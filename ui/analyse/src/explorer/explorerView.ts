@@ -3,8 +3,9 @@ import { VNode } from 'snabbdom/vnode'
 import { view as renderConfig } from './explorerConfig';
 import { bind, dataIcon } from '../util';
 import AnalyseCtrl from '../ctrl';
+import { isOpening, isTablebase, TablebaseMoveStats, OpeningMoveStats, OpeningGame } from './interfaces';
 
-function resultBar(move): VNode {
+function resultBar(move: OpeningMoveStats): VNode {
   const sum = move.white + move.draws + move.black;
   function section(key) {
     const percent = move[key] * 100 / sum;
@@ -44,17 +45,18 @@ function moveTableAttributes(ctrl: AnalyseCtrl, fen: Fen) {
   };
 }
 
-function showMoveTable(ctrl: AnalyseCtrl, moves, fen: Fen): VNode | null {
+function showMoveTable(ctrl: AnalyseCtrl, moves: OpeningMoveStats[], fen: Fen): VNode | null {
   if (!moves.length) return null;
+  const trans = ctrl.trans.noarg;
   return h('table.moves', [
     h('thead', [
       h('tr', [
-        h('th', ctrl.trans.noarg('move')),
-        h('th', ctrl.trans.noarg('games')),
-        h('th', ctrl.trans.noarg('whiteDrawBlack'))
+        h('th', trans('move')),
+        h('th', trans('games')),
+        h('th', trans('whiteDrawBlack'))
       ])
     ]),
-    h('tbody', moveTableAttributes(ctrl, fen), moves.map(function(move) {
+    h('tbody', moveTableAttributes(ctrl, fen), moves.map(move => {
       return h('tr', {
         key: move.uci,
         attrs: {
@@ -70,14 +72,15 @@ function showMoveTable(ctrl: AnalyseCtrl, moves, fen: Fen): VNode | null {
   ]);
 }
 
-function showResult(winner: Color): VNode {
+function showResult(winner?: Color): VNode {
   if (winner === 'white') return h('result.white', '1-0');
   if (winner === 'black') return h('result.black', '0-1');
   return h('result.draws', '½-½');
 }
 
-function showGameTable(ctrl: AnalyseCtrl, title: string, games): VNode | null {
+function showGameTable(ctrl: AnalyseCtrl, title: string, games: OpeningGame[]): VNode | null {
   if (!ctrl.explorer.withGames || !games.length) return null;
+  const openedId = ctrl.explorer.gameMenu();
   return h('table.games', [
     h('thead', [
       h('tr', [
@@ -88,37 +91,78 @@ function showGameTable(ctrl: AnalyseCtrl, title: string, games): VNode | null {
       hook: bind('click', e => {
         const $tr = $(e.target).parents('tr');
         if (!$tr.length) return;
-        const orientation = ctrl.chessground.state.orientation;
-        const fenParam = ctrl.node.ply > 0 ? ('?fen=' + ctrl.node.fen) : '';
-        if (ctrl.explorer.config.data.db.selected() === 'lichess')
-          window.open('/' + $tr.data('id') + '/' + orientation + fenParam, '_blank');
-        else window.open('/import/master/' + $tr.data('id') + '/' + orientation + fenParam, '_blank');
+        const id = $tr.data('id');
+        if (ctrl.study && ctrl.study.members.canContribute()) {
+          ctrl.explorer.gameMenu(id);
+          ctrl.redraw();
+        } else openGame(ctrl, id);
       })
-    }, games.map(function(game) {
-      return h('tr', {
+    }, games.map(game => {
+      return openedId === game.id ? gameActions(ctrl, game) : h('tr', {
         key: game.id,
         attrs: { 'data-id': game.id }
       }, [
-        h('td', [game.white, game.black].map(function(p) {
-          return h('span', p.rating);
-        })),
-        h('td', [game.white, game.black].map(function(p) {
-          return h('span', p.name);
-        })),
+        h('td', [game.white, game.black].map(p => h('span', '' + p.rating))),
+        h('td', [game.white, game.black].map(p => h('span', p.name))),
         h('td', showResult(game.winner)),
-        h('td', game.year)
+        h('td', [game.year])
       ]);
     }))
   ]);
 }
 
-function showTablebase(ctrl: AnalyseCtrl, title: string, moves, fen: Fen): VNode[] {
+function openGame(ctrl: AnalyseCtrl, gameId: string) {
+  const orientation = ctrl.chessground.state.orientation,
+  fenParam = ctrl.node.ply > 0 ? ('?fen=' + ctrl.node.fen) : '';
+  let url = '/' + gameId + '/' + orientation + fenParam;
+  if (ctrl.explorer.config.data.db.selected() === 'masters') url = '/import/master' + url;
+  window.open(url, '_blank');
+}
+
+function gameActions(ctrl: AnalyseCtrl, game: OpeningGame): VNode {
+  function send(insert: boolean) {
+    ctrl.study!.explorerGame(game.id, insert);
+    ctrl.explorer.gameMenu(null);
+    ctrl.redraw();
+  }
+  return h('tr', {
+    key: game.id + '-m',
+  }, [
+    h('td.game_menu', {
+      attrs: { colspan: 4 },
+    }, [
+      h('div.game_title', `${game.white.name} - ${game.black.name}, ${showResult(game.winner).text}, ${game.year}`),
+      h('div.menu', [
+        h('a.text', {
+          attrs: dataIcon('v'),
+          hook: bind('click', _ => openGame(ctrl, game.id))
+        }, 'View'),
+        ...(ctrl.study ? [
+          h('a.text', {
+            attrs: dataIcon('c'),
+            hook: bind('click', _ => send(false), ctrl.redraw)
+          }, 'Cite'),
+          h('a.text', {
+            attrs: dataIcon('O'),
+            hook: bind('click', _ => send(true), ctrl.redraw)
+          }, 'Insert')
+        ] : []),
+        h('a.text', {
+          attrs: dataIcon('L'),
+          hook: bind('click', _ => ctrl.explorer.gameMenu(null), ctrl.redraw)
+        }, 'Close')
+      ])
+    ])
+  ]);
+}
+
+function showTablebase(ctrl: AnalyseCtrl, title: string, moves: TablebaseMoveStats[], fen: Fen): VNode[] {
   if (!moves.length) return [];
   const stm = fen.split(/\s/)[1];
   return [
     h('div.title', title),
     h('table.tablebase', [
-      h('tbody', moveTableAttributes(ctrl, fen), moves.map(function(move) {
+      h('tbody', moveTableAttributes(ctrl, fen), moves.map(move => {
         return h('tr', {
           key: move.uci,
           attrs: { 'data-uci': move.uci }
@@ -131,14 +175,14 @@ function showTablebase(ctrl: AnalyseCtrl, title: string, moves, fen: Fen): VNode
   ];
 }
 
-function winner(stm, move): Color | undefined {
-  if ((stm[0] == 'w' && move.wdl < 0) || (stm[0] == 'b' && move.wdl > 0))
+function winner(stm: string, move: TablebaseMoveStats): Color | undefined {
+  if ((stm[0] == 'w' && move.wdl! < 0) || (stm[0] == 'b' && move.wdl! > 0))
     return 'white';
-  if ((stm[0] == 'b' && move.wdl < 0) || (stm[0] == 'w' && move.wdl > 0))
+  if ((stm[0] == 'b' && move.wdl! < 0) || (stm[0] == 'w' && move.wdl! > 0))
     return 'black';
 }
 
-function showDtm(ctrl: AnalyseCtrl, stm, move) {
+function showDtm(ctrl: AnalyseCtrl, stm: string, move: TablebaseMoveStats) {
   if (move.dtm) return h('result.' + winner(stm, move), {
     attrs: {
       title: ctrl.trans.plural('mateInXHalfMoves', Math.abs(move.dtm)) + ' (Depth To Mate)'
@@ -146,17 +190,18 @@ function showDtm(ctrl: AnalyseCtrl, stm, move) {
   }, 'DTM ' + Math.abs(move.dtm));
 }
 
-function showDtz(ctrl: AnalyseCtrl, stm, move): VNode | null {
-  if (move.checkmate) return h('result.' + winner(stm, move), ctrl.trans.noarg('checkmate'));
-  else if (move.stalemate) return h('result.draws', ctrl.trans.noarg('stalemate'));
-  else if (move.variant_win) return h('result.' + winner(stm, move), ctrl.trans.noarg('variantLoss'));
-  else if (move.variant_loss) return h('result.' + winner(stm, move), ctrl.trans.noarg('variantWin'));
-  else if (move.insufficient_material) return h('result.draws', ctrl.trans.noarg('insufficientMaterial'));
+function showDtz(ctrl: AnalyseCtrl, stm: string, move: TablebaseMoveStats): VNode | null {
+  const trans = ctrl.trans.noarg;
+  if (move.checkmate) return h('result.' + winner(stm, move), trans('checkmate'));
+  else if (move.stalemate) return h('result.draws', trans('stalemate'));
+  else if (move.variant_win) return h('result.' + winner(stm, move), trans('variantLoss'));
+  else if (move.variant_loss) return h('result.' + winner(stm, move), trans('variantWin'));
+  else if (move.insufficient_material) return h('result.draws', trans('insufficientMaterial'));
   else if (move.dtz === null) return null;
-  else if (move.dtz === 0) return h('result.draws', ctrl.trans.noarg('draw'));
+  else if (move.dtz === 0) return h('result.draws', trans('draw'));
   else if (move.zeroing) return move.san.indexOf('x') !== -1 ?
-  h('result.' + winner(stm, move), ctrl.trans.noarg('capture')) :
-  h('result.' + winner(stm, move), ctrl.trans.noarg('pawnMove'));
+  h('result.' + winner(stm, move), trans('capture')) :
+  h('result.' + winner(stm, move), trans('pawnMove'));
   return h('result.' + winner(stm, move), {
     attrs: {
       title: ctrl.trans.plural('nextCaptureOrPawnMoveInXHalfMoves', Math.abs(move.dtz))
@@ -177,8 +222,8 @@ function showEmpty(ctrl: AnalyseCtrl): VNode {
     h('div.message', [
       h('h3', ctrl.trans.noarg('noGameFound')),
       ctrl.explorer.config.fullHouse() ?
-        null :
-        h('p.explanation', ctrl.trans.noarg('maybeIncludeMoreGamesFromThePreferencesMenu')),
+      null :
+      h('p.explanation', ctrl.trans.noarg('maybeIncludeMoreGamesFromThePreferencesMenu')),
       closeButton(ctrl)
     ])
   ]);
@@ -195,28 +240,30 @@ function showGameEnd(ctrl: AnalyseCtrl, title: string): VNode {
   ]);
 }
 
-function show(ctrl) {
-  var data = ctrl.explorer.current();
-  if (data && data.opening) {
-    var moveTable = showMoveTable(ctrl, data.moves, data.fen);
-    var recentTable = showGameTable(ctrl, ctrl.trans.noarg('recentGames'), data['recentGames'] || []);
-    var topTable = showGameTable(ctrl, ctrl.trans.noarg('topGames'), data['topGames'] || []);
+function show(ctrl: AnalyseCtrl) {
+  const trans = ctrl.trans.noarg,
+  data = ctrl.explorer.current();
+  if (data && isOpening(data)) {
+    const moveTable = showMoveTable(ctrl, data.moves, data.fen),
+    recentTable = showGameTable(ctrl, trans('recentGames'), data.recentGames || []),
+    topTable = showGameTable(ctrl, trans('topGames'), data.topGames || []);
     if (moveTable || recentTable || topTable) lastShow = h('div.data', [moveTable, topTable, recentTable]);
     else lastShow = showEmpty(ctrl);
-  } else if (data && data.tablebase) {
+  } else if (data && isTablebase(data)) {
     const moves = data.moves;
-    if (moves.length) lastShow = h('div.data', [
-      [ctrl.trans.noarg('winning'), m => m.wdl === -2],
-      [ctrl.trans.noarg('unknown'), m => m.wdl === null],
-      [ctrl.trans.noarg('winPreventedBy50MoveRule'), m => m.wdl === -1],
-      [ctrl.trans.noarg('drawn'), m => m.wdl === 0],
-      [ctrl.trans.noarg('lossSavedBy50MoveRule'), m => m.wdl === 1],
-      [ctrl.trans.noarg('losing'), m => m.wdl === 2],
-    ].map(a => showTablebase(ctrl, a[0] as string, moves.filter(a[1]), data.fen))
-      .reduce(function(a, b) { return a.concat(b); }, []))
-    else if (data.checkmate) lastShow = showGameEnd(ctrl, ctrl.trans.noarg('checkmate'))
-      else if (data.stalemate) lastShow = showGameEnd(ctrl, ctrl.trans.noarg('stalemate'))
-        else if (data.variant_win || data.variant_loss) lastShow = showGameEnd(ctrl, ctrl.trans.noarg('variantEnding'));
+    if (moves.length) lastShow = h('div.data', ([
+      [trans('winning'), m => m.wdl === -2],
+      [trans('unknown'), m => m.wdl === null],
+      [trans('winPreventedBy50MoveRule'), m => m.wdl === -1],
+      [trans('drawn'), m => m.wdl === 0],
+      [trans('lossSavedBy50MoveRule'), m => m.wdl === 1],
+      [trans('losing'), m => m.wdl === 2],
+    ] as [string, (move: TablebaseMoveStats) => boolean][])
+      .map(a => showTablebase(ctrl, a[0] as string, moves.filter(a[1]), data.fen))
+      .reduce(function(a, b) { return a.concat(b); }, []));
+    else if (data.checkmate) lastShow = showGameEnd(ctrl, trans('checkmate'))
+      else if (data.stalemate) lastShow = showGameEnd(ctrl, trans('stalemate'))
+        else if (data.variant_win || data.variant_loss) lastShow = showGameEnd(ctrl, trans('variantEnding'));
       else lastShow = showEmpty(ctrl);
   }
   return lastShow;
@@ -233,7 +280,7 @@ function showConfig(ctrl: AnalyseCtrl): VNode {
   ].concat(renderConfig(ctrl.explorer.config)));
 }
 
-function showFailing(ctrl) {
+function showFailing(ctrl: AnalyseCtrl) {
   return h('div.data.empty', [
     h('div.title', showTitle(ctrl, ctrl.data.game.variant)),
     h('div.failing.message', [
@@ -249,11 +296,11 @@ let lastFen: Fen = '';
 export default function(ctrl: AnalyseCtrl): VNode | undefined {
   const explorer = ctrl.explorer;
   if (!explorer.enabled()) return;
-  const data = explorer.current();
-  const config = explorer.config;
-  const configOpened = config.data.open();
-  const loading = !configOpened && (explorer.loading() || (!data && !explorer.failing()));
-  const content = configOpened ? showConfig(ctrl) : (explorer.failing() ? showFailing(ctrl) : show(ctrl));
+  const data = explorer.current(),
+  config = explorer.config,
+  configOpened = config.data.open(),
+  loading = !configOpened && (explorer.loading() || (!data && !explorer.failing())),
+  content = configOpened ? showConfig(ctrl) : (explorer.failing() ? showFailing(ctrl) : show(ctrl));
   return h('div.explorer_box', {
     class: {
       loading,

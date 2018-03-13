@@ -1,6 +1,5 @@
 package lila.round
 
-import scala.concurrent.duration._
 import scala.concurrent.Promise
 import scala.util.Try
 
@@ -11,11 +10,11 @@ import chess.{ Centis, MoveMetrics, Color }
 import play.api.libs.json.{ JsObject, Json }
 
 import actorApi._, round._
-import lila.common.PimpedJson._
 import lila.common.IpAddress
 import lila.game.{ Pov, PovRef, GameRepo, Game }
 import lila.hub.actorApi.map._
 import lila.hub.actorApi.round.Berserk
+import lila.hub.actorApi.shutup.PublicSource
 import lila.socket.actorApi.{ Connected => _, _ }
 import lila.socket.Handler
 import lila.socket.Socket.Uid
@@ -35,7 +34,7 @@ private[round] final class SocketHandler(
 
   private def controller(
     gameId: Game.ID,
-    chatId: Option[Chat.Id], // if using a non-game chat (tournament, simul, ...)
+    chat: Option[Chat.Setup], // if using a non-game chat (tournament, simul, ...)
     socket: ActorRef,
     uid: Uid,
     ref: PovRef,
@@ -43,7 +42,7 @@ private[round] final class SocketHandler(
     me: Option[User]
   ): Handler.Controller = {
 
-    def send(msg: Any) { roundMap ! Tell(gameId, msg) }
+    def send(msg: Any): Unit = { roundMap ! Tell(gameId, msg) }
 
     member.playerIdOption.fold[Handler.Controller](({
       case ("p", o) => socket ! Ping(uid, o)
@@ -54,7 +53,8 @@ private[round] final class SocketHandler(
       chatId = Chat.Id(s"$gameId/w"),
       member = member,
       socket = socket,
-      chat = messenger.chat
+      chat = messenger.chat,
+      publicSource = PublicSource.Watcher(gameId).some
     )) { playerId =>
       ({
         case ("p", o) => socket ! Ping(uid, o)
@@ -91,7 +91,7 @@ private[round] final class SocketHandler(
         case ("outoftime", _) => send(QuietFlag) // mobile app BC
         case ("flag", o) => clientFlag(o, playerId.some) foreach send
         case ("bye2", _) => socket ! Bye(ref.color)
-        case ("talk", o) if chatId.isEmpty => o str "d" foreach { messenger.owner(gameId, member, _) }
+        case ("talk", o) if chat.isEmpty => o str "d" foreach { messenger.owner(gameId, member, _) }
         case ("hold", o) => for {
           d ← o obj "d"
           mean ← d int "mean"
@@ -106,7 +106,8 @@ private[round] final class SocketHandler(
           name ← d str "n"
         } selfReport(member.userId, member.ip, s"$gameId$playerId", name)
       }: Handler.Controller) orElse lila.chat.Socket.in(
-        chatId = chatId | Chat.Id(gameId),
+        chatId = chat.fold(Chat.Id(gameId))(_.id),
+        publicSource = chat.map(_.publicSource),
         member = member,
         socket = socket,
         chat = messenger.chat
@@ -151,8 +152,8 @@ private[round] final class SocketHandler(
       userTv = userTv
     )
     // non-game chat, for tournament or simul games; only for players
-    val publicChatId = playerId.isDefined ?? {
-      pov.game.tournamentId.map(Chat.Id) orElse pov.game.simulId.map(Chat.Id)
+    val chatSetup = playerId.isDefined ?? {
+      pov.game.tournamentId.map(Chat.tournamentSetup) orElse pov.game.simulId.map(Chat.simulSetup)
     }
     socketHub ? Get(pov.gameId) mapTo manifest[ActorRef] flatMap { socket =>
       Handler(hub, socket, uid, join) {
@@ -160,7 +161,7 @@ private[round] final class SocketHandler(
           // register to the TV channel when watching TV
           if (playerId.isEmpty && pov.game.isRecentTv)
             hub.channel.tvSelect ! lila.socket.Channel.Sub(member)
-          (controller(pov.gameId, publicChatId, socket, uid, pov.ref, member, user), enum, member)
+          (controller(pov.gameId, chatSetup, socket, uid, pov.ref, member, user), enum, member)
       }
     }
   }

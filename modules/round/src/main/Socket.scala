@@ -54,12 +54,12 @@ private[round] final class Socket(
 
     var userId = none[String]
 
-    def ping {
+    def ping: Unit = {
       isGone foreach { _ ?? notifyGone(color, false) }
       if (bye > 0) bye = bye - 1
       time = nowMillis
     }
-    def setBye {
+    def setBye: Unit = {
       bye = 3
     }
     private def isBye = bye > 0
@@ -77,13 +77,13 @@ private[round] final class Socket(
   private val whitePlayer = new Player(White)
   private val blackPlayer = new Player(Black)
 
-  override def preStart() {
+  override def preStart(): Unit = {
     super.preStart()
     buscriptions.all
     GameRepo game gameId map SetGame.apply pipeTo self
   }
 
-  override def postStop() {
+  override def postStop(): Unit = {
     super.postStop()
     lilaBus.unsubscribe(self)
   }
@@ -173,7 +173,7 @@ private[round] final class Socket(
       val member = Member(channel, user, color, playerId, ip, userTv = userTv)
       addMember(uid.value, member)
       notifyCrowd
-      playerDo(color, _.ping)
+      if (playerId.isDefined) playerDo(color, _.ping)
       sender ! Connected(enumerator, member)
       if (member.userTv.isDefined) buscriptions.tv
 
@@ -194,7 +194,7 @@ private[round] final class Socket(
           pgnMoves = a.game.pgnMoves,
           variant = a.variant,
           analysis = a.analysis.some,
-          initialFen = a.initialFen.value,
+          initialFen = a.initialFen,
           withFlags = JsonView.WithFlags(),
           clocks = none
         )
@@ -233,14 +233,14 @@ private[round] final class Socket(
     }
   }
 
-  def notifyCrowd {
+  def notifyCrowd: Unit = {
     if (!delayedCrowdNotification) {
       delayedCrowdNotification = true
       context.system.scheduler.scheduleOnce(1 second, self, NotifyCrowd)
     }
   }
 
-  def notify(events: Events) {
+  def notify(events: Events): Unit = {
     val vevents = history addEvents events
     members.foreachValue { m => batch(m, vevents) }
   }
@@ -256,7 +256,7 @@ private[round] final class Socket(
       _ push makeMessage(t, data)
     }
 
-  def notifyGone(color: Color, gone: Boolean) {
+  def notifyGone(color: Color, gone: Boolean): Unit = {
     notifyOwner(!color, "gone", gone)
   }
 
@@ -285,7 +285,7 @@ private[round] final class Socket(
   private def playerGet[A](color: Color, getter: Player => A): A =
     getter(color.fold(whitePlayer, blackPlayer))
 
-  private def playerDo(color: Color, effect: Player => Unit) {
+  private def playerDo(color: Color, effect: Player => Unit): Unit = {
     effect(color.fold(whitePlayer, blackPlayer))
   }
 }

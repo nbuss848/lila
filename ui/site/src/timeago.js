@@ -37,48 +37,56 @@ lichess.timeago = (function() {
     return lichess.timeagoLocale(diff, i, total_sec)[agoin].replace('%s', diff);
   }
 
-  // calculate the diff second between date to be formated now
+  // calculate the diff second between date to be formatted now
   function diffSec(date) {
     return (Date.now() - toDate(date)) / 1000;
   }
 
-  var formatter = (window.Intl && Intl.DateTimeFormat) ?
-    new Intl.DateTimeFormat(document.documentElement.lang, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric'
-    }).format : function(d) { return d.toLocaleString(); }
+  var formatterInst;
 
-    /**
-    * timeago: the function to get `timeago` instance.
-    *
-    * How to use it?
-    * var timeagoFactory = require('timeago.js');
-    * var timeago = timeagoFactory(); // all use default.
-    * var timeago = timeagoFactory('2016-09-10'); // the relative date is 2016-09-10, so the 2016-09-11 will be 1 day ago.
-    **/
-    return {
-      render: function(nodes) {
-        if (nodes.length === undefined) nodes = [nodes];
-        for (var i = 0, len = nodes.length; i < len; i++) {
-          var node = nodes[i],
-            abs = node.classList.contains('abs'),
-            set = node.classList.contains('set');
-          if (set && abs) continue;
-          var date = toDate(node.getAttribute('datetime'));
-          if (!set) {
-            var str = formatter(date);
-            if (abs) node.innerHTML = str;
-            else node.setAttribute('title', str);
-            node.classList.add('set');
-          }
-          if (!abs) node.innerHTML = formatDiff(diffSec(date));
+  function formatter() {
+    return formatterInst = formatterInst || (window.Intl && Intl.DateTimeFormat ?
+      new Intl.DateTimeFormat(document.documentElement.lang, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric'
+      }).format : function(d) { return d.toLocaleString(); })
+  }
+
+  /**
+  * timeago: the function to get `timeago` instance.
+  *
+  * How to use it?
+  * var timeagoFactory = require('timeago.js');
+  * var timeago = timeagoFactory(); // all use default.
+  * var timeago = timeagoFactory('2016-09-10'); // the relative date is 2016-09-10, so the 2016-09-11 will be 1 day ago.
+  **/
+  return {
+    render: function(nodes) {
+      if (nodes.length === undefined) nodes = [nodes];
+      for (var i = 0, len = nodes.length; i < len; i++) {
+        var node = nodes[i],
+          abs = node.classList.contains('abs'),
+          set = node.classList.contains('set');
+        if (set && abs) continue;
+        var date = toDate(node.getAttribute('datetime'));
+        if (!set) {
+          var str = formatter()(date);
+          if (abs) node.innerHTML = str;
+          else node.setAttribute('title', str);
+          node.classList.add('set');
         }
-      },
-      format: function(date) {
-        return formatDiff(diffSec(date));
+        if (!abs) node.innerHTML = formatDiff(diffSec(date));
       }
-    };
+    },
+    // relative
+    format: function(date) {
+      return formatDiff(diffSec(date));
+    },
+    absolute: function(d) {
+      return formatter()(toDate(d));
+    }
+  };
 })();

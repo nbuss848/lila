@@ -4,7 +4,6 @@ import akka.actor._
 import scala.concurrent.duration._
 
 import actorApi._
-import lila.common.PimpedJson._
 import lila.pool.{ PoolApi, PoolConfig }
 import lila.rating.RatingRange
 import lila.socket.Handler
@@ -63,6 +62,7 @@ private[lobby] final class SocketHandler(
         d <- o obj "d"
         id <- d str "id"
         ratingRange = d str "range" flatMap RatingRange.apply
+        blocking = d str "blocking"
       } {
         lobby ! CancelHook(member.uid) // in case there's one...
         poolApi.join(
@@ -73,7 +73,7 @@ private[lobby] final class SocketHandler(
             ratingMap = user.perfMap.mapValues(_.rating),
             ratingRange = ratingRange,
             lame = user.lame,
-            blocking = user.blocking
+            blocking = user.blocking ++ blocking
           )
         )
       }

@@ -8,7 +8,6 @@ import lila.app._
 import lila.challenge.{ Challenge => ChallengeModel }
 import lila.common.{ HTTPRequest, LilaCookie }
 import lila.game.{ Pov, GameRepo, AnonCookie }
-import lila.i18n.{ I18nKeys => trans }
 import lila.user.UserRepo
 import views.html
 
@@ -118,7 +117,7 @@ object Challenge extends LilaController {
         username => UserRepo named username flatMap {
           case None => Redirect(routes.Challenge.show(c.id)).fuccess
           case Some(dest) => Env.challenge.granter(ctx.me, dest, c.perfType.some) flatMap {
-            case Some(denied) => showChallenge(c, lila.challenge.ChallengeDenied.inEnglish(denied).some)
+            case Some(denied) => showChallenge(c, lila.challenge.ChallengeDenied.translated(denied).some)
             case None => env.api.setDestUser(c, dest) inject Redirect(routes.Challenge.show(c.id))
           }
         }
@@ -133,7 +132,7 @@ object Challenge extends LilaController {
         _ ?? { opponent =>
           env.granter(me.some, opponent, g.perfType) flatMap {
             case Some(d) => BadRequest(jsonError {
-              lila.challenge.ChallengeDenied inEnglish d
+              lila.challenge.ChallengeDenied translated d
             }).fuccess
             case _ => env.api.rematchOf(g, me) map {
               _.fold(Ok, BadRequest(jsonError("Sorry, couldn't create the rematch.")))

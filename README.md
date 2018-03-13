@@ -5,7 +5,7 @@
 [![Crowdin](https://d322cqt584bo4o.cloudfront.net/lichess/localized.svg)](https://crowdin.com/project/lichess)
 [![Twitter](https://img.shields.io/badge/Twitter-%40lichess-blue.svg)](https://twitter.com/lichess)
 
-<img src="https://raw.githubusercontent.com/ornicar/lila/master/public/images/homepage_light.1200.png" alt="lichess.org" />
+<img src="https://raw.githubusercontent.com/ornicar/lila/master/public/images/home-bicolor.png" alt="lichess.org" />
 
 Lila (li[chess in sca]la) is a free online chess game server focused on [realtime](https://lichess.org/games) gameplay and ease of use.
 
@@ -23,16 +23,17 @@ The UI is available in more than [80 languages](https://crowdin.com/project/lich
 Lichess is written in [Scala 2.11](https://www.scala-lang.org/),
 and relies on [Play 2.4](https://www.playframework.com/) for the routing, templating, and JSON.
 Pure chess logic is contained in [scalachess](https://github.com/ornicar/scalachess) submodule.
-The codebase is fully asynchronous, making heavy use of Scala Futures and [Akka 2 actors](http://akka.io).
-Lichess talks to [Stockfish](http://stockfishchess.org/) deployed in an AI cluster of donated servers.
-It uses [MongoDB 3.4](https://mongodb.org) to store more than 400 million games, which are indexed by [elasticsearch](http://elasticsearch.org).
-HTTP requests and websocket connections are proxied by [nginx 1.8](http://nginx.org).
-Client-side is written in [mithril.js](http://mithril.js.org/).
+The server is fully asynchronous, making heavy use of Scala Futures and [Akka 2 actors](http://akka.io).
+Lichess talks to [Stockfish](http://stockfishchess.org/) deployed in an [AI cluster](https://github.com/niklasf/fishnet) of donated servers.
+It uses [MongoDB 3.4](https://mongodb.org) to store more than 600 million games, which are indexed by [elasticsearch](http://elasticsearch.org).
+HTTP requests and websocket connections are proxied by [nginx 1.9](http://nginx.org).
+The web client is written in [TypeScript](https://typescriptlang.org) and [snabbdom](https://github.com/snabbdom/snabbdom).
 The [blog](https://lichess.org/blog) uses a free open content plan from [prismic.io](https://prismic.io).
+All rated standard games are published in a [free PGN database](https://database.lichess.org).
 Browser testing done with [![](https://raw.githubusercontent.com/ornicar/lila/master/public/images/browserstack.png)](https://www.browserstack.com).
-Please help us [translate lichess with Crowdin](https://crowdin.com).
+Please help us [translate lichess with Crowdin](https://crowdin.com/project/lichess).
 
-[Join us on discord](https://discord.gg/AWSze7n) or in the #lichess freenode IRC channel for more info.
+[Join us on discord](https://discord.gg/hy5jqSs) or in the #lichess freenode IRC channel for more info.
 Use [GitHub issues](https://github.com/ornicar/lila/issues) for bug reports and feature requests.
 
 Installation
@@ -42,7 +43,7 @@ Installation
 
 > This project source code is open for other developers to have an example of non-trivial scala/play2/mongodb application. You're welcome to reuse as much code as you want for your projects and to get inspired by the solutions I propose to many common web development problems. But please don't just create a public lichess clone. Instead, [embed lichess using an &lt;iframe&gt;](https://lichess.org/developers) into your website.
 
-> Also note that if I provide the source code, I do **not** offer support for your lichess instance. I will probably ignore any question about lichess installation and runtime issues.
+> Also note that while I provide the source code, I do **not** offer support for your lichess instance. I will probably ignore any question about lichess installation and runtime issues.
 
 ## HTTP API
 
@@ -72,7 +73,7 @@ Please do not automate computer analysis requests. They're very expensive.
   "online": true,                            // is the player currently using lichess?
   "playing": "https://lichess.org/abcdefgh", // game being played, if any
   "engine": false,                           // true if the user is known to use a chess engine
-  "language": "en",                          // prefered language
+  "language": "en",                          // preferred language
   "profile": {
     "bio": "Writes bugs for free",
     "country": "FR",
@@ -631,6 +632,16 @@ curl 'https://lichess.org/api/tournament/x5WNIngd?page=1'
     ]
   }
 }
+```
+
+JSONP is available.
+
+### `GET /tv/channels` fetch current tournaments
+
+Returns the current game ID and best player for each TV channel: https://lichess.org/tv
+
+```
+> curl https://lichess.org/tv/channels
 ```
 
 JSONP is available.

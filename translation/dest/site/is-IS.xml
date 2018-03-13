@@ -46,7 +46,16 @@
   <string name="viewTheComputerAnalysis">Skoða tölvugreiningu</string>
   <string name="requestAComputerAnalysis">Biðja um tölvugreiningu</string>
   <string name="computerAnalysis">Tölvugreining</string>
+  <string name="computerAnalysisAvailable">Tölvugreining í boði</string>
   <string name="analysis">Greining</string>
+  <string name="depthX">Dýpt %s</string>
+  <string name="usingServerAnalysis">Greining frá þjóni</string>
+  <string name="loadingEngine">Hleð inn vél...</string>
+  <string name="cloudAnalysis">Greining í skýi</string>
+  <string name="goDeeper">Fara dýpra</string>
+  <string name="showThreat">Sýna ógn</string>
+  <string name="move">Færa</string>
+  <string name="unknown">Óþekktur</string>
   <string name="openingExplorer">Skoða opnanir</string>
   <string name="blunders">Afleikir</string>
   <string name="mistakes">Mistök</string>
@@ -108,7 +117,6 @@
   <string name="changePassword">Skipta um lykilorð</string>
   <string name="changeEmail">Breyta tölvupóstfangi</string>
   <string name="email">Tölvupóstfang</string>
-  <string name="emailIsOptional">Tölvupóstfang er valkvætt. Lichess mun nota það til þess að senda þér nýtt lykilorð ef þú týnir þínu.</string>
   <string name="passwordReset">Breyta lykilorði</string>
   <string name="forgotPassword">Gleymdirðu lykilorðinu?</string>
   <string name="rank">Staða</string>
@@ -317,6 +325,7 @@
   <string name="keepGoing">Haltu áfram...</string>
   <string name="puzzleFailed">Rangt svar</string>
   <string name="butYouCanKeepTrying">En þú getur haldið áfram að reyna.</string>
+  <string name="success">Árangur</string>
   <string name="wasThisPuzzleAnyGood">Var þessi þraut góð?</string>
   <string name="pleaseVotePuzzle">Hjálpaðu lichess að bæta sig með því að kjósa, notaðu upp og niður örvarnar:</string>
   <string name="thankYou">Takk fyrir!</string>
@@ -330,10 +339,6 @@
   <string name="retryThisPuzzle">Reyna aftur við þessa þraut</string>
   <string name="thisPuzzleIsCorrect">Þessi þraut er rétt og áhugaverð</string>
   <string name="thisPuzzleIsWrong">Þessi þraut er röng eða leiðinleg</string>
-  <plurals name="youHaveNbSecondsToMakeYourFirstMove">
-    <item quantity="one">Þú hefur %s sekúndur til þess að leika fyrsta leik!</item>
-    <item quantity="other">Þú hefur %s sekúndur til þess að leika fyrsta leik!</item>
-  </plurals>
   <plurals name="nbGamesInPlay">
     <item quantity="one">%s leikir í gangi</item>
     <item quantity="other">%s leikir í gangi</item>
@@ -426,6 +431,7 @@
   <string name="xAnsweredY">%1$s svaraði %2$s</string>
   <string name="xCommentedY">%1$s skrifaði %2$s</string>
   <string name="victory">Sigur!</string>
+  <string name="defeat">Ósigur</string>
   <string name="timeline">Tímalína</string>
   <string name="seeAllTournaments">Sjá öll skákmót</string>
   <string name="starting">Hefst:</string>
@@ -452,6 +458,7 @@
   <string name="playOnTheBoardOffline">Yfir borðið</string>
   <string name="playOfflineComputer">Skáktölva</string>
   <string name="opponent">Andstæðingur</string>
+  <string name="learnMenu">Læra</string>
   <string name="community">Samfélag</string>
   <string name="tools">Tól</string>
   <string name="increment">Aukning</string>
@@ -533,8 +540,6 @@
   <string name="checkYourEmail">Gáðu í tölvupóstinn þinn</string>
   <string name="weHaveSentYouAnEmailClickTheLink">Við sendum þér tölvupóst. Fylgdu hlekknum þar til þess að virkja aðganginn þinn.</string>
   <string name="ifYouDoNotSeeTheEmailCheckOtherPlaces">Ef þú sérð ekki póstinn, gáðu þá betur svo sem í ruslakistunni, ruslpóstinum eða öðrum möppum.</string>
-  <string name="areYouSureYouEvenRegisteredYourEmailOnLichess">Ertu viss um að hafa skráð þig á lichess áður?</string>
-  <string name="itWasNotRequiredForYourRegistration">Þess var ekki þörf við skráningu yðar</string>
   <string name="weHaveSentYouAnEmailTo">Við sendum póst á %s. Fylgdu hlekknum þar til þess að skipta um lykilorð.</string>
   <string name="byRegisteringYouAgreeToBeBoundByOur">Með því að skrá þig, þá samþykkir þú %s okkar.</string>
   <string name="networkLagBetweenYouAndLichess">Hik í tengingu á milli þín og lichess</string>
@@ -568,4 +573,6 @@
     <item quantity="other">Til á %s tungumálum</item>
   </plurals>
   <string name="gameAnalysis">Leikgreining</string>
+  <string name="language">Tungumál</string>
+  <string name="error.unknown">Villa</string>
 </resources>

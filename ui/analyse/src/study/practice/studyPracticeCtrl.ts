@@ -1,8 +1,8 @@
 import * as xhr from '../studyXhr';
-import { prop } from 'common';
+import { prop, storedProp } from 'common';
 import makeSuccess from './studyPracticeSuccess';
 import makeSound from './sound';
-import { readOnlyProp, enrichText } from '../../util';
+import { readOnlyProp } from '../../util';
 import { StudyPracticeData, Goal, StudyPracticeCtrl } from './interfaces';
 import { StudyData } from '../interfaces';
 import AnalyseCtrl from '../../ctrl';
@@ -15,13 +15,13 @@ export default function(root: AnalyseCtrl, studyData: StudyData, data: StudyPrac
   // null = ongoing, true = win, false = fail
   success = prop<boolean | null>(null),
   sound = makeSound(),
-  analysisUrl = prop('');
+  analysisUrl = prop(''),
+  autoNext = storedProp('practice-auto-next', true);
 
-  function makeComment(treeRoot: Tree.Node): string | undefined {
+  function makeComment(treeRoot: Tree.Node) {
     if (!treeRoot.comments) return;
-    const c = enrichText(treeRoot.comments[0].text, false);
+    comment(treeRoot.comments[0].text);
     delete treeRoot.comments;
-    return c;
   }
 
   function onLoad() {
@@ -31,7 +31,7 @@ export default function(root: AnalyseCtrl, studyData: StudyData, data: StudyPrac
     goal(root.data.practiceGoal!);
     nbMoves(0);
     success(null);
-    comment(makeComment(root.tree.root));
+    makeComment(root.tree.root);
     const chapter = studyData.chapter;
     history.replaceState(null, chapter.name, data.url + '/' + chapter.id);
     analysisUrl('/analysis/standard/' + root.node.fen.replace(/ /g, '_') + '?color=' + root.bottomColor());
@@ -60,8 +60,12 @@ export default function(root: AnalyseCtrl, studyData: StudyData, data: StudyPrac
       xhr.practiceComplete(chapterId, nbMoves());
     }
     sound.success();
+    if (autoNext()) setTimeout(goToNext, 1000);
+  }
+
+  function goToNext() {
     const next = root.study!.nextChapter();
-    if (next) setTimeout(() => root.study!.setChapter(next.id), 1000);
+    if (next) root.study!.setChapter(next.id);
   }
 
   function onFailure(): void {
@@ -70,7 +74,10 @@ export default function(root: AnalyseCtrl, studyData: StudyData, data: StudyPrac
   }
 
   return {
-    onReload: onLoad,
+    onReload() {
+      comment('');
+      onLoad();
+    },
     onJump() {
       // reset failure state if no failed move found in mainline history
       if (success() === false && !root.nodeList.find(n => !!n.fail)) success(null);
@@ -88,9 +95,9 @@ export default function(root: AnalyseCtrl, studyData: StudyData, data: StudyPrac
       root.practice!.reset();
       onLoad();
     },
-    isWhite() {
-      return root.bottomColor() === 'white';
-    },
-    analysisUrl
+    isWhite: root.bottomIsWhite,
+    analysisUrl,
+    autoNext,
+    goToNext
   };
 }

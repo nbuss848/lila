@@ -1,7 +1,6 @@
 package lila.plan
 
 import lila.db.dsl._
-import lila.memo._
 import lila.user.{ User, UserRepo }
 
 import org.joda.time.DateTime
@@ -146,6 +145,9 @@ final class PlanApi(
     customerIdPatron(sub.customer) flatMap {
       case None =>
         logger.warn(s"Deleted subscription of unknown patron $sub")
+        funit
+      case Some(patron) if patron.isLifetime =>
+        logger.info(s"Ignore sub end for lifetime patron $patron")
         funit
       case Some(patron) =>
         UserRepo byId patron.userId flatten s"Missing user for $patron" flatMap { user =>

@@ -5,7 +5,6 @@ import play.api.libs.json._
 import chess.format.Forsyth
 import lila.common.LightUser
 import lila.common.paginator.Paginator
-import lila.common.PimpedJson._
 import lila.game.{ Game, PerfPicker }
 
 final class UserGameApi(
@@ -14,7 +13,6 @@ final class UserGameApi(
 ) {
 
   import lila.game.JsonView._
-  import lila.round.JsonView._
   import LightUser.lightUserWrites
 
   def jsPaginator(pag: Paginator[Game])(implicit ctx: Context): Fu[JsObject] =
@@ -46,13 +44,13 @@ final class UserGameApi(
         .add("rating" -> p.rating)
         .add("ratingDiff" -> p.ratingDiff)
     }),
-    "fen" -> Forsyth.exportBoard(g.toChess.board),
+    "fen" -> Forsyth.exportBoard(g.board),
     "winner" -> g.winnerColor.map(_.name),
     "bookmarks" -> g.bookmarks
   ).add("bookmarked" -> bookmarked)
     .add("analysed" -> g.metadata.analysed)
     .add("opening" -> g.opening)
-    .add("lastMove" -> g.castleLastMoveTime.lastMoveString)
+    .add("lastMove" -> g.lastMoveKeys)
     .add("clock" -> g.clock)
     .add("correspondence" -> g.daysPerTurn.map { d =>
       Json.obj("daysPerTurn" -> d)

@@ -3,8 +3,6 @@ package lila.game
 import akka.actor._
 import com.typesafe.config.Config
 
-import lila.common.PimpedConfig._
-
 final class Env(
     config: Config,
     db: lila.db.Env,
@@ -15,6 +13,7 @@ final class Env(
     appPath: String,
     isProd: Boolean,
     asyncCache: lila.memo.AsyncCache.Builder,
+    settingStore: lila.memo.SettingStore.Builder,
     scheduler: lila.common.Scheduler
 ) {
 
@@ -47,7 +46,7 @@ final class Env(
   lazy val paginator = new PaginatorBuilder(
     coll = gameColl,
     cached = cached,
-    maxPerPage = PaginatorMaxPerPage
+    maxPerPage = lila.common.MaxPerPage(PaginatorMaxPerPage)
   )
 
   lazy val rewind = Rewind
@@ -71,9 +70,6 @@ final class Env(
 
   // load captcher actor
   private val captcher = system.actorOf(Props(new Captcher), name = CaptcherName)
-
-  val recentGoodGameActor = system.actorOf(Props[RecentGoodGame], name = "recent-good-game")
-  system.lilaBus.subscribe(recentGoodGameActor, 'finishGame)
 
   scheduler.message(CaptcherDuration) {
     captcher -> actorApi.NewCaptcha
@@ -108,6 +104,7 @@ object Env {
     appPath = play.api.Play.current.path.getCanonicalPath,
     isProd = lila.common.PlayApp.isProd,
     asyncCache = lila.memo.Env.current.asyncCache,
+    settingStore = lila.memo.Env.current.settingStore,
     scheduler = lila.common.PlayApp.scheduler
   )
 }

@@ -17,19 +17,20 @@ object Global extends GlobalSettings {
     }
   }
 
-  override def onStart(app: Application) {
+  override def onStart(app: Application): Unit = {
     kamon.Kamon.start()
     lila.app.Env.current
   }
 
-  override def onStop(app: Application) {
+  override def onStop(app: Application): Unit = {
     kamon.Kamon.shutdown()
   }
 
   override def onRouteRequest(req: RequestHeader): Option[Handler] = {
     lila.mon.http.request.all()
     if (req.remoteAddress contains ":") lila.mon.http.request.ipv6()
-    lila.i18n.Env.current.subdomainKiller(req) orElse super.onRouteRequest(req)
+    lila.i18n.Env.current.subdomainKiller(req) orElse
+      super.onRouteRequest(req)
   }
 
   private def niceError(req: RequestHeader): Boolean =
@@ -40,7 +41,7 @@ object Global extends GlobalSettings {
   override def onHandlerNotFound(req: RequestHeader) = {
     if (niceError(req)) {
       logHttp(404, req)
-      controllers.Main.notFound(req)
+      controllers.Main.renderNotFound(req)
     } else fuccess(NotFound("404 - Resource not found"))
   }
 
@@ -60,7 +61,7 @@ object Global extends GlobalSettings {
       if (lila.common.PlayApp.isProd) {
         lila.mon.http.response.code500()
         fuccess(InternalServerError(views.html.base.errorPage(ex) {
-          lila.api.Context(req, lila.app.Env.api.assetVersion.get, lila.i18n.defaultLang)
+          lila.api.Context.error(req, lila.common.AssetVersion(lila.app.Env.api.assetVersionSetting.get()), lila.i18n.defaultLang)
         }))
       } else super.onError(req, ex)
     } else fuccess(InternalServerError(ex.getMessage))
